@@ -1,0 +1,21 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String  @id @default(cuid()) // Unique internal database ID
+  clerkId      String  @unique // Clerk Auth ki unique ID takay sync rahe
+  emailAddress String  @unique // User ka primary email address
+  firstName    String? // Optional first name
+  lastName     String? // Optional last name
+  imageUrl     String? // Clerk se user ki profile picture ka URL
+}
