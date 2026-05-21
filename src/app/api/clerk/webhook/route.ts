@@ -8,19 +8,27 @@ export const POST = async (req: Request) => {
   const first_name = data.first_name;
   const last_name = data.last_name;
   const image_url = data.image_url;
-  const emailAddress = data.email_addresses?.[0]?.email_address;
+  
+  // 🌟 Safe Check: Agar Clerk testing dummy data bhej raha hai jisme email nahi hai, to fake email generate kar lo
+  const emailAddress = data.email_addresses?.[0]?.email_address ?? `${id}@temporary.com`;
 
-  // Video ke mutabiq exact database insertion
-  await db.user.create({
-    data: {
-      clerkId: id,
-      emailAddress: emailAddress,
-      firstName: first_name,
-      lastName: last_name,
-      imageUrl: image_url,
-    }
-  })
+  try {
+    // Exact database insertion with safety fallbacks
+    await db.user.create({
+      data: {
+        clerkId: id,
+        emailAddress: emailAddress,
+        firstName: first_name ?? "",
+        lastName: last_name ?? "",
+        imageUrl: image_url ?? "",
+      }
+    });
 
-  console.log('user created')
-  return new Response('Webhook received', { status: 200 })
+    console.log('🎉 User successfully created in Neon DB');
+    return new Response('Webhook received', { status: 200 });
+
+  } catch (error) {
+    console.error('❌ Prisma Insertion Error:', error);
+    return new Response('Database insertion failed', { status: 500 });
+  }
 };
