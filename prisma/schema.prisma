@@ -1,21 +1,141 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-    provider = "prisma-client-js"
-    output   = "../generated/prisma"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-    id           String   @id @default(cuid()) // Unique internal database ID
-    emailAddress String   @unique             // User ka primary email address
-    firstName    String?                  // Optional first name
-    lastName     String?                  // Optional last name
-    imageUrl     String?                      // Clerk se user ki profile picture ka URL
-    
+  id           String    @id
+  emailAddress String    @unique
+  firstName    String?
+  lastName     String?
+  imageUrl     String?
+  accounts     Account[]
+}
+
+model Account {
+  id             String         @id
+  accessToken    String         @unique
+  emailAddress   String
+  name           String?
+  userId         String
+  nextDeltaToken String?
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emails         Email[]
+  emailAddresses EmailAddress[]
+  threads        Thread[]
+}
+
+model Thread {
+  id              String   @id @default(cuid())
+  subject         String
+  done            Boolean  @default(false)
+  accountId       String
+  draftStatus     Boolean  @default(false)
+  inboxStatus     Boolean  @default(true)
+  lastMessageDate DateTime
+  participantIds  String[]
+  sentStatus      Boolean  @default(false)
+  emails          Email[]
+  account         Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([done])
+  @@index([inboxStatus])
+  @@index([draftStatus])
+  @@index([sentStatus])
+  @@index([lastMessageDate])
+}
+
+model Email {
+  id                   String                @id @default(cuid())
+  threadId             String
+  accountId            String
+  subject              String
+  body                 String?
+  sentAt               DateTime
+  receivedAt           DateTime
+  internetMessageId    String                @unique
+  sysLabels            String[]
+  bodySnippet          String?
+  createdTime          DateTime
+  emailLabel           EmailLabel            @default(inbox)
+  folderId             String?
+  fromId               String
+  hasAttachments       Boolean
+  inReplyTo            String?
+  internetHeaders      Json[]
+  keywords             String[]
+  lastModifiedTime     DateTime
+  meetingMessageMethod MeetingMessageMethod?
+  nativeProperties     Json[]
+  omitted              String[]
+  references           String?
+  sensitivity          Sensitivity           @default(normal)
+  sysClassifications   String[]
+  threadIndex          String?
+  account              Account               @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  from                 EmailAddress          @relation("FromEmail", fields: [fromId], references: [id])
+  thread               Thread                @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  attachments          EmailAttachment[]
+  bcc                  EmailAddress[]        @relation("BccEmails")
+  cc                   EmailAddress[]        @relation("CcEmails")
+  replyTo              EmailAddress[]        @relation("ReplyToEmails")
+  to                   EmailAddress[]        @relation("ToEmails")
+
+  @@index([threadId])
+  @@index([emailLabel])
+  @@index([sentAt])
+}
+
+model EmailAddress {
+  id            String  @id @default(cuid())
+  name          String?
+  address       String
+  raw           String?
+  accountId     String
+  sentEmails    Email[] @relation("FromEmail")
+  account       Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  receivedBcc   Email[] @relation("BccEmails")
+  receivedCc    Email[] @relation("CcEmails")
+  replyToEmails Email[] @relation("ReplyToEmails")
+  receivedTo    Email[] @relation("ToEmails")
+
+  @@unique([accountId, address])
+}
+
+model EmailAttachment {
+  id              String  @id @default(cuid())
+  name            String
+  mimeType        String
+  size            Int
+  inline          Boolean
+  contentId       String?
+  content         String?
+  contentLocation String?
+  emailId         String
+  email           Email   @relation(fields: [emailId], references: [id], onDelete: Cascade)
+}
+
+enum EmailLabel {
+  inbox
+  sent
+  draft
+}
+
+enum Sensitivity {
+  normal
+  private
+  personal
+  confidential
+}
+
+enum MeetingMessageMethod {
+  request
+  reply
+  cancel
 }

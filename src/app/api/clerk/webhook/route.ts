@@ -1,4 +1,5 @@
 import { db } from "@/server/db";
+export const dynamic = 'force-dynamic';
 
 export const POST = async (req: Request) => {
   const { data } = await req.json();
@@ -16,7 +17,7 @@ export const POST = async (req: Request) => {
     // Exact database insertion with safety fallbacks
     await db.user.create({
       data: {
-        clerkId: id,
+        id: id,
         emailAddress: emailAddress,
         firstName: first_name ?? "",
         lastName: last_name ?? "",

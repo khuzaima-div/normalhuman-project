@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -12,10 +9,19 @@ datasource db {
 }
 
 model User {
-  id           String  @id @default(cuid()) // Unique internal database ID
-  clerkId      String  @unique // Clerk Auth ki unique ID takay sync rahe
-  emailAddress String  @unique // User ka primary email address
-  firstName    String? // Optional first name
-  lastName     String? // Optional last name
-  imageUrl     String? // Clerk se user ki profile picture ka URL
+  id           String    @id @default(cuid())
+  emailAddress String    @unique
+  firstName    String
+  lastName     String
+  imageUrl     String?
+  accounts     Account[]
+}
+
+model Account {
+  id           String @id @default(cuid())
+  userId       String
+  accessToken  String @unique
+  emailAddress String
+  name         String
+  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
