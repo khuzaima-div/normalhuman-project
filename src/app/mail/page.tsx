@@ -1,28 +1,27 @@
 "use client"
 
-import React from 'react'
+// src/app/mail/page.tsx
 import dynamic from 'next/dynamic'
+import React from 'react'
 
-// Dynamically imported with clean hydration boundary safety
-const Mail = dynamic<{
-  defaultLayout?: number[]
-  navCollapsedSize?: number
-  defaultCollapsed?: boolean
-}>(() => import('./mail').then((m) => m.default ?? m), {
-    ssr: false,
-    loading: () => (
-      <div className="h-screen w-full bg-slate-50 dark:bg-slate-950 animate-pulse" />
-    )
+// Hydration issues se bachne ke liye Mail component bina SSR ke dynamically load ho raha hai
+const Mail = dynamic(() => {
+    return import('./mail')
+}, {
+    ssr: false
 })
 
 const MailDashboard = () => {
-  return (
-    <Mail 
-      defaultLayout={[20, 32, 48]} 
-      defaultCollapsed={false} 
-      navCollapsedSize={4} 
-    />
-  )
+    return (
+        <>
+            {/* Main Resizable Mail Component Panel */}
+            <Mail
+                defaultLayout={[20, 32, 48]}
+                defaultCollapsed={false}
+                navCollapsedSize={4}
+            />
+        </>
+    )
 }
 
 export default MailDashboard

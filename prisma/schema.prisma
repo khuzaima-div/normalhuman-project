@@ -9,12 +9,24 @@ datasource db {
 }
 
 model User {
-  id           String    @id
-  emailAddress String    @unique
+  id           String  @id // Clerk ID ke liye isse bina @default(cuid()) ke hi rehne dein
+  emailAddress String  @unique
   firstName    String?
   lastName     String?
   imageUrl     String?
-  accounts     Account[]
+
+  // Fixed: Clean 1-to-1 relation side
+  stripeSubscription StripeSubscription?
+  role               Role                @default(user)
+  accounts           Account[]
+
+  // Fixed: Changed to array because a user has interactions spread across multiple days
+  chatbotInteractions ChatbotInteraction[]
+}
+
+enum Role {
+  user
+  admin
 }
 
 model Account {
@@ -24,6 +36,7 @@ model Account {
   name           String?
   userId         String
   nextDeltaToken String?
+  binaryIndex    String?
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   emails         Email[]
   emailAddresses EmailAddress[]
@@ -119,6 +132,35 @@ model EmailAttachment {
   contentLocation String?
   emailId         String
   email           Email   @relation(fields: [emailId], references: [id], onDelete: Cascade)
+}
+
+model StripeSubscription {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // Fixed: Relation explicitly defined here to support .findUnique({ where: { userId } })
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  subscriptionId String? @unique
+  productId      String?
+  priceId        String?
+  customerId     String?
+
+  currentPeriodEnd DateTime
+  updatedAt        DateTime @updatedAt
+}
+
+model ChatbotInteraction {
+  id     String @id @default(cuid())
+  userId String
+  day    String
+  count  Int    @default(0)
+
+  // Fixed: Added back-relation to User model
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, day])
 }
 
 enum EmailLabel {

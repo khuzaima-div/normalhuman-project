@@ -64,22 +64,24 @@ export const GET = async (req: NextRequest) => {
             })
         }
 
-        // 5. Step 3: Exact Instructor Pattern Database Upsert
+        // 5. Step 3: Ensure the Aurinko account record is unique and always updated
         await db.account.upsert({
             where: {
-                id: token.accountId.toString(), 
+                id: token.accountId.toString(),
             },
             update: {
                 accessToken: token.accessToken,
                 emailAddress: accountDetails.email,
                 name: accountDetails.name,
+                nextDeltaToken: null,
             },
             create: {
                 id: token.accountId.toString(),
-                userId: existingUser.id, 
+                userId: existingUser.id,
                 emailAddress: accountDetails.email,
                 name: accountDetails.name,
                 accessToken: token.accessToken,
+                nextDeltaToken: null,
             },
         })
 
@@ -98,8 +100,8 @@ export const GET = async (req: NextRequest) => {
             })
         );
 
-        // User ko cleanly dashboard ya mail page par bhej dein
-        return NextResponse.redirect(new URL('/mail', req.nextUrl.origin));
+        // User ko cleanly dashboard ya mail page par bhej dein, and pass the newly linked account ID
+        return NextResponse.redirect(new URL(`/mail?accountId=${token.accountId.toString()}`, req.nextUrl.origin));
 
     } catch (error) {
         console.error("Error in Aurinko Callback:", error)

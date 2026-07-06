@@ -5,11 +5,15 @@ import { usePanelRef } from "react-resizable-panels"
 import { cn } from "../../lib/utils"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../../components/ui/resizable"
 import { Separator } from "../../components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs"
 import { TooltipProvider } from "../../components/ui/tooltip"
-import { AccountSwitcher } from "./components/account-switcher"
 import { SideBar } from "./components/sidebar"
 import { useThreads } from "../../hooks/use-threads"
+import { ThreadDisplay } from "./components/thread-display"
+
+// ✨ Orama aur Search Bar ki integration ke liye imports
+import SearchBar, { isSearchingAtom, searchResultsAtom } from "./SearchBar"
+import { useAtom } from "jotai"
+
 
 interface MailProps {
   defaultLayout?: number[]
@@ -33,6 +37,14 @@ const normalizeSize = (size: number | string | undefined): number | string => {
 
 export function Mail({ defaultLayout, defaultCollapsed = false, navCollapsedSize = 4 }: MailProps) {
   const { threads, isLoading, tab, setTab, selectedThreadId, setSelectedThreadId } = useThreads()
+  const [selectedEmailId, setSelectedEmailId] = React.useState<string | null>(null)
+  
+  // ✨ Jotai States for Search
+  const [isSearching] = useAtom(isSearchingAtom)
+  const [searchResults] = useAtom(searchResultsAtom)
+
+  const selectedThread = threads.find((thread) => thread.id === selectedThreadId) ?? null
+  const selectedEmail = selectedThread?.emails?.find((email) => email.id === selectedEmailId) ?? null
   const [isMounted, setIsMounted] = React.useState(false)
   const [isCollapsed, setIsCollapsed] = React.useState(false)
   const sidebarRef = usePanelRef()
@@ -56,7 +68,7 @@ export function Mail({ defaultLayout, defaultCollapsed = false, navCollapsedSize
 
   return (
     <TooltipProvider delayDuration={0}>
-      <div className="fixed inset-0 flex h-screen w-screen items-stretch overflow-hidden bg-white select-none">
+      <div className="fixed inset-0 flex h-screen w-screen items-stretch overflow-hidden bg-white dark:bg-zinc-950 text-zinc-950 dark:text-zinc-50 select-none transition-colors duration-300">
         <ResizablePanelGroup
           direction="horizontal"
           defaultLayout={layout}
@@ -66,6 +78,7 @@ export function Mail({ defaultLayout, defaultCollapsed = false, navCollapsedSize
           }}
           className="items-stretch h-full w-full"
         >
+          {/* 🌟 Panel 1: Sidebar Container */}
           <ResizablePanel
             id="sidebar"
             panelRef={sidebarRef}
@@ -75,40 +88,77 @@ export function Mail({ defaultLayout, defaultCollapsed = false, navCollapsedSize
             minSize="15%"
             maxSize="25%"
             onResize={() => setIsCollapsed(sidebarRef.current?.isCollapsed() ?? false)}
-            className="border-r border-slate-200 bg-white flex flex-col h-full overflow-hidden transition-all duration-300 ease-in-out"
+            className="border-r border-slate-200 dark:border-zinc-900 bg-white dark:bg-zinc-950 flex flex-col h-full overflow-hidden transition-all duration-300 ease-in-out"
           >
-            <div className="flex h-full w-full flex-col bg-white">
-              <div className={cn("flex h-14 items-center justify-center bg-white shrink-0", isCollapsed ? "px-0" : "px-4")}>
-                <AccountSwitcher isCollapsed={isCollapsed} />
-              </div>
-              <Separator />
-              <div className="flex-1 overflow-y-auto p-2 bg-white">
-                <SideBar isCollapsed={isCollapsed} />
-              </div>
+            <div className="flex h-full w-full flex-col overflow-hidden bg-white dark:bg-zinc-950">
+              <SideBar isCollapsed={isCollapsed} />
             </div>
           </ResizablePanel>
 
-          <ResizableHandle withHandle className="bg-slate-200 w-px" />
+          <ResizableHandle withHandle className="bg-slate-200 dark:bg-zinc-900 w-px transition-colors" />
 
-          <ResizablePanel id="threads" defaultSize={normalizeSize(layout.threads)} minSize="25%" maxSize="40%" className="bg-white">
-            <Tabs value={tab} onValueChange={(next) => setTab(next)} defaultValue={tab ?? "inbox"}>
-              <div className="flex h-14 items-center justify-between bg-white px-4 py-2 shrink-0">
-                <h1 className="text-xl font-bold text-slate-800">Inbox</h1>
-                <TabsList className="ml-auto">
-                  <TabsTrigger value="inbox" className="text-zinc-600 text-xs">
-                    Inbox
-                  </TabsTrigger>
-                  <TabsTrigger value="done" className="text-zinc-600 text-xs">
-                    Done
-                  </TabsTrigger>
-                </TabsList>
+          {/* 🌟 Panel 2: Threads List & Search Wrapper */}
+          <ResizablePanel id="threads" defaultSize={normalizeSize(layout.threads)} minSize="25%" maxSize="40%" className="bg-white dark:bg-zinc-950">
+            <div className="flex h-14 items-center justify-between bg-white dark:bg-zinc-950 px-4 py-2 shrink-0">
+              <h1 className="text-xl font-bold text-slate-800 dark:text-zinc-100">Inbox</h1>
+              <div className="ml-auto flex items-center rounded-lg bg-zinc-100 p-1 dark:bg-zinc-900">
+                <button onClick={() => setTab("inbox")} className={cn("px-3 py-1.5 text-xs rounded-md transition-all", tab === "inbox" ? "bg-white font-medium text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-600 dark:text-zinc-400")}>Inbox</button>
+                <button onClick={() => setTab("done")} className={cn("px-3 py-1.5 text-xs rounded-md transition-all", tab === "done" ? "bg-white font-medium text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50" : "text-zinc-600 dark:text-zinc-400")}>Done</button>
               </div>
-              <Separator />
+            </div>
+            <Separator className="dark:bg-zinc-900" />
 
-              <TabsContent value="inbox" className="m-0 p-4">
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-8 text-sm text-slate-500">Loading inbox threads...</div>
-                ) : threads && threads.length > 0 ? (
+            {/* ✨ SearchBar Injection */}
+            <SearchBar />
+            <Separator className="dark:bg-zinc-900" />
+
+            {/* Main Content Area */}
+            <div className="h-[calc(100vh-7rem)] overflow-y-auto p-4 bg-zinc-50/40 dark:bg-zinc-950/20 space-y-3">
+              {isSearching ? (
+                // 🔍 ORAMA SEARCH LIST VIEW
+                searchResults && searchResults.hits && searchResults.hits.length > 0 ? (
+                  <div className="space-y-3">
+                    <p className="text-xs text-muted-foreground px-1 font-medium">Found {searchResults.hits.length} matching items</p>
+                    {searchResults.hits.map((hit: any) => {
+                      const email = hit.document
+                      const selected = selectedThreadId === email.threadId
+
+                      return (
+                        <button
+                          key={hit.id}
+                          type="button"
+                          onClick={() => setSelectedThreadId(email.threadId)}
+                          className={cn(
+                            "w-full rounded-xl border p-4 text-left transition-all duration-200",
+                            selected 
+                              ? "border-slate-300 bg-slate-50 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80" 
+                              : "border-slate-200 bg-white hover:border-slate-300 dark:border-zinc-900 dark:bg-zinc-900/30 dark:hover:bg-zinc-900/50 dark:hover:border-zinc-800"
+                          )}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-zinc-100">
+                                <span className="truncate">{email.title ?? "No subject"}</span>
+                              </div>
+                              <div className="mt-1.5 text-xs text-slate-500 dark:text-zinc-400">{email.from || "Unknown sender"}</div>
+                            </div>
+                            <div className="text-xs text-slate-400 dark:text-zinc-500">
+                              {email.sentAt ? new Date(email.sentAt).toLocaleDateString() : "—"}
+                            </div>
+                          </div>
+                          <p className="mt-2.5 text-sm leading-5 text-slate-600 dark:text-zinc-400 line-clamp-2">{email.body ?? "No preview available."}</p>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-sm text-slate-500 dark:text-zinc-500">
+                    No matching messages found in search index.
+                  </div>
+                )
+              ) : (
+                // 📥 STANDARD INBOX / DONE LISTS
+                threads && threads.length > 0 ? (
                   <div className="space-y-3">
                     {threads.map((thread) => {
                       const latestEmail = thread.emails?.at(-1)
@@ -120,87 +170,55 @@ export function Mail({ defaultLayout, defaultCollapsed = false, navCollapsedSize
                           type="button"
                           onClick={() => setSelectedThreadId(thread.id)}
                           className={cn(
-                            "w-full rounded-xl border p-4 text-left transition-colors",
-                            selected ? "border-slate-300 bg-slate-50" : "border-slate-200 bg-white hover:border-slate-300"
+                            "w-full rounded-xl border p-4 text-left transition-all duration-200",
+                            selected 
+                              ? "border-slate-300 bg-slate-50 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80" 
+                              : "border-slate-200 bg-white hover:border-slate-300 dark:border-zinc-900 dark:bg-zinc-900/30 dark:hover:bg-zinc-900/50 dark:hover:border-zinc-800"
                           )}
                         >
                           <div className="flex items-start gap-3">
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                              <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-zinc-100">
                                 <span className="truncate">{thread.subject ?? "No subject"}</span>
                               </div>
-                              <div className="mt-2 text-xs text-slate-500">{latestEmail?.from?.name || latestEmail?.from?.address || "Unknown sender"}</div>
+                              <div className="mt-1.5 text-xs text-slate-500 dark:text-zinc-400">{latestEmail?.from?.name || latestEmail?.from?.address || "Unknown sender"}</div>
                             </div>
-                            <div className="text-xs text-slate-400">{latestEmail?.sentAt ? new Date(latestEmail.sentAt).toLocaleDateString() : "—"}</div>
+                            <div className="text-xs text-slate-400 dark:text-zinc-500">{latestEmail?.sentAt ? new Date(latestEmail.sentAt).toLocaleDateString() : "—"}</div>
                           </div>
-                          <p className="mt-3 text-sm leading-5 text-slate-600 line-clamp-2">{latestEmail?.bodySnippet ?? "No preview available."}</p>
+                          <p className="mt-2.5 text-sm leading-5 text-slate-600 dark:text-zinc-400 line-clamp-2">{latestEmail?.bodySnippet ?? "No preview available."}</p>
                         </button>
                       )
                     })}
                   </div>
                 ) : (
-                  <div className="py-8 text-center text-sm text-slate-500">No threads found in the inbox.</div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="done" className="m-0 p-4">
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-8 text-sm text-slate-500">Loading done threads...</div>
-                ) : threads && threads.length > 0 ? (
-                  <div className="space-y-3">
-                    {threads.map((thread) => {
-                      const latestEmail = thread.emails?.at(-1)
-                      const selected = selectedThreadId === thread.id
-
-                      return (
-                        <button
-                          key={thread.id}
-                          type="button"
-                          onClick={() => setSelectedThreadId(thread.id)}
-                          className={cn(
-                            "w-full rounded-xl border p-4 text-left transition-colors",
-                            selected ? "border-slate-300 bg-slate-50" : "border-slate-200 bg-white hover:border-slate-300"
-                          )}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                                <span className="truncate">{thread.subject ?? "No subject"}</span>
-                              </div>
-                              <div className="mt-2 text-xs text-slate-500">{latestEmail?.from?.name || latestEmail?.from?.address || "Unknown sender"}</div>
-                            </div>
-                            <div className="text-xs text-slate-400">{latestEmail?.sentAt ? new Date(latestEmail.sentAt).toLocaleDateString() : "—"}</div>
-                          </div>
-                          <p className="mt-3 text-sm leading-5 text-slate-600 line-clamp-2">{latestEmail?.bodySnippet ?? "No preview available."}</p>
-                        </button>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <div className="py-8 text-center text-sm text-slate-500">No done threads found.</div>
-                )}
-              </TabsContent>
-            </Tabs>
+                  <div className="py-8 text-center text-sm text-slate-500 dark:text-zinc-500">No threads found.</div>
+                )
+              )}
+            </div>
           </ResizablePanel>
 
-          <ResizableHandle withHandle className="bg-slate-200 w-px" />
+          <ResizableHandle withHandle className="bg-slate-200 dark:bg-zinc-900 w-px transition-colors" />
 
-          <ResizablePanel id="preview" defaultSize={normalizeSize(layout.preview)} minSize="30%" className="bg-white">
-            <div className="flex min-w-0 h-full flex-col bg-white">
-              <div className="flex h-14 items-center justify-between bg-white border-b border-slate-200 px-6 shrink-0">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono">Preview Mode</span>
-              </div>
-              <div className="flex h-full flex-1 flex-col items-center justify-center bg-white p-6 text-center">
-                <div className="space-y-2 max-w-xs">
-                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-slate-100 bg-slate-50 text-slate-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
-                  </div>
-                  <p className="text-sm font-medium text-slate-700">Select an email to read</p>
-                  <p className="text-xs leading-relaxed text-slate-400">Thread display module placeholder.</p>
+          {/* 🌟 Panel 3: Reading / Preview Pane */}
+          <ResizablePanel id="preview" defaultSize={normalizeSize(layout.preview)} minSize="30%" className="bg-white dark:bg-zinc-950">
+            <div className="flex min-w-0 h-full flex-col overflow-hidden bg-white dark:bg-zinc-950">
+              {selectedThreadId && selectedThread ? (
+                <div className="flex-1 overflow-hidden min-w-0">
+                  <ThreadDisplay threadId={selectedThread.id} emailId={selectedEmail?.id ?? null} />
                 </div>
-              </div>
+              ) : (
+                <div className="flex h-full flex-1 flex-col items-center justify-center bg-white dark:bg-zinc-950 p-6 text-center">
+                  <div className="space-y-2 max-w-xs">
+                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-slate-100 bg-slate-50 text-slate-400 dark:border-zinc-900 dark:bg-zinc-900 dark:text-zinc-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      </svg>
+                    </div>
+                    <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">No message selected</p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">Choose a thread to view the conversation</p>
+                  </div>
+                </div>
+              )}
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>

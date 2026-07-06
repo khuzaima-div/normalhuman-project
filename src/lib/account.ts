@@ -32,7 +32,7 @@ class Account {
         // 🌟 PROFESSIONAL DYNAMIC TUNNEL CONFIGURATION
         // Agar aapke paas koi live tunnel chal raha ha, to uska URL yahan paste karein. 
         // Agar tunnel nahi chalana, to bas isko khali string "" chhor dein, system crash nahi karega!
-        let webhookUrl = "https://potatoes-calculator-reports-crisis.trycloudflare.com"; 
+        let webhookUrl = "https://unslow-marquitta-noncandescently.ngrok-free.dev"; 
 
         // Clean trailing slashes if any
         webhookUrl = webhookUrl.trim().replace(/\/$/, "");

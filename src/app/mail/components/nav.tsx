@@ -24,7 +24,7 @@ export function Nav({ links, isCollapsed, onTabChange }: NavProps) {
       data-collapsed={isCollapsed}
       className="group flex flex-col gap-4 py-2 data-[collapsed=true]:py-2 min-h-0 w-full"
     >
-      <nav className="grid gap-1 px-2 group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-0 w-full">
+      <nav className="grid gap-1.5 px-2 group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-0 w-full">
         {links.map((link, index) => {
           const isDefault = link.variant === "default"
           
@@ -35,20 +35,24 @@ export function Nav({ links, isCollapsed, onTabChange }: NavProps) {
                   onClick={() => onTabChange(link.id)}
                   className={cn(
                     buttonVariants({ variant: link.variant, size: "icon" }),
-                    "h-9 w-9 rounded-lg transition-all flex items-center justify-center",
+                    "h-9 w-9 rounded-xl transition-all duration-200 ease-in-out flex items-center justify-center group/btn relative",
                     isDefault 
-                      ? "bg-slate-900 text-white hover:bg-slate-900 shadow-sm" 
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                      ? "bg-zinc-950 text-white dark:bg-zinc-50 dark:text-zinc-950 hover:bg-zinc-950 dark:hover:bg-zinc-50 shadow-md scale-100" 
+                      : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-50"
                   )}
                 >
-                  <link.icon className="h-4 w-4 shrink-0" />
+                  <link.icon className={cn(
+                    "h-4 w-4 shrink-0 transition-transform duration-200", 
+                    !isDefault && "group-hover/btn:scale-110"
+                  )} />
                   <span className="sr-only">{link.title}</span>
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right" className="flex items-center gap-4 bg-slate-900 text-white border-none text-xs rounded-md shadow-md">
-                {link.title}
+              {/* Premium Adaptive Dark Tooltip Container */}
+              <TooltipContent side="right" className="flex items-center gap-4 bg-zinc-950 text-white dark:bg-zinc-900 dark:text-zinc-100 dark:border dark:border-zinc-800 border-none text-xs font-medium py-1.5 px-3 rounded-lg shadow-lg">
+                <span className="tracking-wide">{link.title}</span>
                 {link.label && (
-                  <span className="ml-auto text-slate-400 font-mono scale-90">{link.label}</span>
+                  <span className="ml-auto text-zinc-400 dark:text-zinc-500 font-mono text-[10px] bg-white/10 dark:bg-zinc-800 px-1.5 py-0.5 rounded-md">{link.label}</span>
                 )}
               </TooltipContent>
             </Tooltip>
@@ -58,19 +62,26 @@ export function Nav({ links, isCollapsed, onTabChange }: NavProps) {
               onClick={() => onTabChange(link.id)}
               className={cn(
                 buttonVariants({ variant: link.variant, size: "sm" }),
-                "flex items-center justify-start h-9 w-full rounded-lg px-3 transition-all text-xs font-medium",
+                "flex items-center justify-start h-10 w-full rounded-xl px-3.5 transition-all duration-200 ease-in-out text-sm font-medium tracking-wide group/btn border border-transparent",
                 isDefault 
-                  ? "bg-slate-900 text-white hover:bg-slate-900 shadow-sm" 
-                  : "text-slate-600 hover:bg-slate-100/70 hover:text-slate-900"
+                  ? "bg-zinc-950 text-white hover:bg-zinc-950 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-50 shadow-md font-semibold border-zinc-950 dark:border-zinc-50" 
+                  : "text-zinc-600 hover:bg-zinc-100/90 hover:text-zinc-950 hover:shadow-sm dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-50"
               )}
             >
-              <link.icon className="mr-2 h-4 w-4 shrink-0" />
+              <link.icon className={cn(
+                "mr-3 h-4 w-4 shrink-0 transition-all duration-200",
+                isDefault 
+                  ? "text-white dark:text-zinc-950" 
+                  : "text-zinc-400 dark:text-zinc-500 group-hover/btn:text-zinc-900 dark:group-hover/btn:text-zinc-50 group-hover/btn:scale-105"
+              )} />
               <span className="truncate flex-1 text-left">{link.title}</span>
               {link.label && (
                 <span
                   className={cn(
-                    "ml-auto text-[10px] font-mono tracking-tight px-1.5 py-0.5 rounded-full scale-90",
-                    isDefault ? "text-white bg-white/20" : "text-slate-500 bg-slate-100"
+                    "ml-auto text-[11px] font-bold font-mono tracking-tighter px-2 py-0.5 rounded-md transition-all duration-200",
+                    isDefault 
+                      ? "text-white bg-white/15 dark:text-zinc-950 dark:bg-zinc-950/10" 
+                      : "text-zinc-600 bg-zinc-100 group-hover/btn:bg-zinc-200/80 group-hover/btn:text-zinc-950 dark:text-zinc-400 dark:bg-zinc-900 dark:group-hover/btn:bg-zinc-800 dark:group-hover/btn:text-zinc-50"
                   )}
                 >
                   {link.label}
