@@ -10,14 +10,11 @@ import {
     Priority,
 } from "kbar";
 import RenderResults from "./RenderResult";
-import { useLocalStorage } from "usehooks-ts";
 import useAccountSwitching from "./use-account-switching";
-import { useThread } from "@/hooks/use-thread";
+import { useMailNavigation } from "@/hooks/use-mail-navigation";
 
 export default function KBar({ children }: { children: React.ReactNode }) {
-    const [_, setTab] = useLocalStorage(`normalhuman-tab`, 'inbox')
-    const [threadId, setThreadId] = useThread()
-    const [done, setDone] = useLocalStorage('normalhuman-done', false)
+    const { setView, setInboxFilter } = useMailNavigation()
 
     const actions: Action[] = [
         {
@@ -27,9 +24,7 @@ export default function KBar({ children }: { children: React.ReactNode }) {
             keywords: "inbox messages mail",
             section: "Navigation",
             subtitle: "View your primary inbox feed",
-            perform: () => {
-                setTab('inbox')
-            },
+            perform: () => setView('inbox'),
         },
         {
             id: "draftsAction",
@@ -39,9 +34,7 @@ export default function KBar({ children }: { children: React.ReactNode }) {
             priority: Priority.HIGH,
             subtitle: "View your compiled drafts",
             section: "Navigation",
-            perform: () => {
-                setTab('drafts')
-            },
+            perform: () => setView('draft'),
         },
         {
             id: "sentAction",
@@ -50,31 +43,25 @@ export default function KBar({ children }: { children: React.ReactNode }) {
             keywords: "sent outbox mail out",
             section: "Navigation",
             subtitle: "View successfully sent emails",
-            perform: () => {
-                setTab('sent')
-            },
+            perform: () => setView('sent'),
         },
         {
             id: "pendingAction",
             name: "See Pending",
-            shortcut: ['g', "p"], // Fixed shortcut conflict
+            shortcut: ['g', "p"],
             keywords: 'pending, undone, not done, active',
             section: "Navigation",
             subtitle: "View the pending emails",
-            perform: () => {
-                setDone(false)
-            },
+            perform: () => setInboxFilter('active'),
         },
         {
             id: "doneAction",
             name: "See Done",
             shortcut: ['g', "u"],
-            keywords: "done completed finished archieve",
+            keywords: "done completed finished archive",
             section: "Navigation",
-            subtitle: "View compiled done emails",
-            perform: () => {
-                setDone(true)
-            },
+            subtitle: "View completed emails",
+            perform: () => setInboxFilter('done'),
         },
     ];
 
@@ -93,18 +80,16 @@ const ActualComponent = ({ children }: { children: React.ReactNode }) => {
     return (
         <>
             <KBarPortal>
-                <KBarPositioner className="fixed inset-0 bg-zinc-950/40 dark:bg-zinc-950/60 backdrop-blur-sm p-4 sm:p-6 z-99999 flex items-start justify-center">
-                    <KBarAnimator className="max-w-150 mt-32 w-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-2xl border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden relative">
-                        <div className="bg-white dark:bg-zinc-900">
-                            <div className="border-b border-zinc-200 dark:border-zinc-800">
-                                <KBarSearch 
-                                    defaultPlaceholder="Type a command or search actions..."
-                                    className="py-3.5 px-5 text-sm w-full bg-transparent outline-none border-none focus:outline-none focus:ring-0 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500" 
-                                />
-                            </div>
-                            <div className="max-h-87.5 overflow-y-auto pb-2">
-                                <RenderResults />
-                            </div>
+                <KBarPositioner className="fixed inset-0 z-50 flex items-start justify-center bg-background/40 p-4 backdrop-blur-sm sm:p-6">
+                    <KBarAnimator className="relative mt-[10vh] w-full max-w-lg overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl">
+                        <div className="border-b border-border">
+                            <KBarSearch 
+                                defaultPlaceholder="Type a command or search…"
+                                className="w-full border-none bg-transparent px-5 py-3.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:outline-none focus:ring-0" 
+                            />
+                        </div>
+                        <div className="max-h-80 overflow-y-auto pb-2">
+                            <RenderResults />
                         </div>
                     </KBarAnimator>
                 </KBarPositioner>

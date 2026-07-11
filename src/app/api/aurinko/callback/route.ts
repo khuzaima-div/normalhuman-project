@@ -2,9 +2,10 @@
 import { auth, currentUser } from "@clerk/nextjs/server"
 import { NextRequest, NextResponse } from "next/server"
 import { exchangeCodeForAccessToken, getAccountDetails } from "@/lib/aurinko"
+import { runInitialSync } from "@/lib/run-initial-sync"
 import { db } from "@/server/db" 
-import axios from "axios"
-import { waitUntil } from "@vercel/functions" // 🌟 Fixed: Added Vercel functions import for background routing
+import { waitUntil } from "@vercel/functions"
+import { assertAccountAllowed, BillingLimitError } from "@/lib/billing"
 
 export const GET = async (req: NextRequest) => {
     try {
@@ -64,19 +65,37 @@ export const GET = async (req: NextRequest) => {
             })
         }
 
+        const accountId = token.accountId.toString()
+        const existingAccount = await db.account.findUnique({
+            where: { id: accountId },
+        })
+
+        if (!existingAccount) {
+            try {
+                await assertAccountAllowed(existingUser.id)
+            } catch (error) {
+                if (error instanceof BillingLimitError) {
+                    return NextResponse.redirect(
+                        new URL("/mail?accountLimit=reached", req.nextUrl.origin),
+                    )
+                }
+                throw error
+            }
+        }
+
         // 5. Step 3: Ensure the Aurinko account record is unique and always updated
+        // Only clear nextDeltaToken on first create — preserve delta on token refresh
         await db.account.upsert({
             where: {
-                id: token.accountId.toString(),
+                id: accountId,
             },
             update: {
                 accessToken: token.accessToken,
                 emailAddress: accountDetails.email,
                 name: accountDetails.name,
-                nextDeltaToken: null,
             },
             create: {
-                id: token.accountId.toString(),
+                id: accountId,
                 userId: existingUser.id,
                 emailAddress: accountDetails.email,
                 name: accountDetails.name,
@@ -85,23 +104,22 @@ export const GET = async (req: NextRequest) => {
             },
         })
 
-        // 🌟 6. Trigger initial sync endpoint via waitUntil safely
-       // 🌟 FIXED: dynamic base host fallback matching your configured env key name
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_URL || req.nextUrl.origin;
-
-        waitUntil(
-            axios.post(`${baseUrl}/api/initial-sync`, {
-                accountId: token.accountId.toString(),
-                userId
-            }).then(response => {
-                console.log('Initial sync triggered successfully:', response.data);
-            }).catch(error => {
-                console.error('Failed to trigger initial sync:', error.message || error);
-            })
-        );
+        // Re-run initial sync only when we still lack a delta token
+        const linkedAccount = await db.account.findUnique({
+            where: { id: accountId },
+            select: { nextDeltaToken: true },
+        })
+        if (!linkedAccount?.nextDeltaToken) {
+            waitUntil(
+                runInitialSync(accountId)
+                    .catch((error) => {
+                        console.error("Failed to run initial sync:", error);
+                    }),
+            );
+        }
 
         // User ko cleanly dashboard ya mail page par bhej dein, and pass the newly linked account ID
-        return NextResponse.redirect(new URL(`/mail?accountId=${token.accountId.toString()}`, req.nextUrl.origin));
+        return NextResponse.redirect(new URL(`/mail?accountId=${accountId}`, req.nextUrl.origin));
 
     } catch (error) {
         console.error("Error in Aurinko Callback:", error)

@@ -1,10 +1,10 @@
-import { create, insert, search, type AnyOrama } from "@orama/orama";
+import { create, upsert, search, getByID, type AnyOrama } from "@orama/orama";
 import { persist, restore } from "@orama/plugin-data-persistence";
 import { db } from "@/server/db";
 import { getEmbeddings } from "../lib/embeddings";
 
-// Frontend k mutabiq types ko manage krne k liye strict interface
 interface OramaEmailDocument {
+    id: string;
     title: string;
     body: string;
     rawBody: string;
@@ -16,9 +16,10 @@ interface OramaEmailDocument {
 }
 
 export class OramaManager {
-    // @ts-ignore
+    // @ts-expect-error Orama instance typed loosely across restore/create
     private orama: AnyOrama;
     private accountId: string;
+    private seenIds = new Set<string>();
 
     constructor(accountId: string) {
         this.accountId = accountId;
@@ -33,11 +34,11 @@ export class OramaManager {
         if (!account) throw new Error('Account not found');
 
         if (account.binaryIndex) {
-            // Database se string readable format mein restore karna
             this.orama = await restore('json', account.binaryIndex);
         } else {
             this.orama = await create({
                 schema: {
+                    id: "string",
                     title: "string",
                     body: "string",
                     rawBody: "string",
@@ -48,13 +49,36 @@ export class OramaManager {
                     threadId: 'string'
                 },
             });
-            await this.saveIndex();
         }
     }
 
-    async insert(document: OramaEmailDocument) {
-        await insert(this.orama, document);
-        await this.saveIndex();
+    async insert(
+        document: OramaEmailDocument,
+        options: { persist?: boolean } = {},
+    ) {
+        if (this.seenIds.has(document.id)) {
+            return;
+        }
+        this.seenIds.add(document.id);
+
+        try {
+            const existing = await getByID(this.orama, document.id);
+            if (existing) {
+                // Already indexed — skip to avoid duplicate hits
+                if (options.persist !== false) {
+                    // no-op persist
+                }
+                return;
+            }
+        } catch {
+            // Legacy index without id lookup support
+        }
+
+        await upsert(this.orama, document);
+
+        if (options.persist !== false) {
+            await this.saveIndex();
+        }
     }
 
     async vectorSearch({ prompt, numResults = 10 }: { prompt: string, numResults?: number }) {
@@ -82,8 +106,8 @@ export class OramaManager {
         const index = await persist(this.orama, 'json');
         await db.account.update({
             where: { id: this.accountId },
-            data: { 
-                binaryIndex: index as string // Buffer crash fixed here
+            data: {
+                binaryIndex: index as string
             }
         });
     }

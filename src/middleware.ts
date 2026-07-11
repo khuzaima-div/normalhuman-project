@@ -1,10 +1,10 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-// Public routes define karein (Sign-in aur Webhook open rahenge)
 const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/api/clerk/webhook',
-  '/api/initial-sync',
+  '/api/aurinko/webhook',
+  '/api/webhooks/stripe',
   '/api/trpc(.*)',
 ])
 
@@ -16,9 +16,7 @@ export default clerkMiddleware(async (auth, req) => {
 
 export const config = {
   matcher: [
-    // 1. Turbopack safe matcher: Saare normal pages aur routes par chalega
     '/((?!_next|[^?]*\\.[^?]*$).*)',
-    // 2. API, Webhooks aur Server Actions (POST requests) ko hamesha target karega
     '/(api|trpc)(.*)',
   ],
 }

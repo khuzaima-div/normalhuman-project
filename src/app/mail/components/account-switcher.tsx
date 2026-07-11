@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAccountSelection } from "@/hooks/use-account-selection"
 import { ChevronDown, Plus } from "lucide-react"
-import { getAurinkoAuthUrl } from "@/lib/aurinko" 
 
 interface AccountSwitcherProps {
   isCollapsed: boolean
@@ -68,16 +67,11 @@ export function AccountSwitcher({ isCollapsed }: AccountSwitcherProps) {
           
           {/* Action Row: Add Account Link */}
           <div 
-            onClick={async () => {
+            onClick={() => {
               if (isRedirecting) return
-              try {
-                setIsRedirecting(true)
-                const authUrl = await getAurinkoAuthUrl('Google')
-                if (authUrl) window.location.href = authUrl
-              } catch (error) {
-                console.error(error)
-                setIsRedirecting(false)
-              }
+              setIsRedirecting(true)
+              // API route builds IMAP authorize URL without OAuth scopes
+              window.location.href = '/api/aurinko/auth?serviceType=IMAP'
             }}
             className="flex items-center gap-2 px-3 py-2 mt-1 text-xs border-t border-slate-100 dark:border-zinc-900 text-slate-500 dark:text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer transition-colors"
           >

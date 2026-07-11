@@ -12,9 +12,6 @@ const ReplyBox = () => {
     const [threadId] = useThread()
     const { accountId } = useThreads()
 
-    console.log("DEBUG: ReplyBox threadId", threadId, "accountId", accountId)
-
-    // getReplyDetails exact procedure call matching our updated router
     const { data: replyDetails, isLoading, error } = api.account.getReplyDetails.useQuery({
         accountId: accountId ?? '',
         threadId: threadId ?? '',
@@ -30,9 +27,9 @@ const ReplyBox = () => {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center p-6 border border-zinc-200 dark:border-zinc-800 rounded-2xl bg-zinc-50/30 dark:bg-zinc-900/10">
+            <div className="flex items-center justify-center rounded-2xl border border-zinc-200/60 bg-white p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)] dark:border-zinc-800/60 dark:bg-zinc-900">
                 <div className="flex items-center gap-3 text-sm text-zinc-500 dark:text-zinc-400">
-                    <span className="inline-block h-4 w-4 rounded-full border-2 border-zinc-300 border-t-transparent animate-spin dark:border-zinc-600" />
+                    <span className="inline-block size-4 animate-spin rounded-full border-2 border-zinc-300 border-t-transparent dark:border-zinc-600" />
                     <span>Loading the reply editor…</span>
                 </div>
             </div>

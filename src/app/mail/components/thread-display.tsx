@@ -2,13 +2,9 @@
 
 import React from "react"
 import { format } from "date-fns"
-import {
-  Archive,
-  ArchiveX,
-  Clock,
-  MoreVertical,
-  Trash2,
-} from "lucide-react"
+import { Archive, ArchiveRestore, MoreVertical } from "lucide-react"
+import { toast } from "sonner"
+import { useLocalStorage } from "usehooks-ts"
 
 import {
   DropdownMenu,
@@ -20,9 +16,9 @@ import {
   Avatar as ShadcnAvatar,
   AvatarFallback,
 } from "../../../components/ui/avatar"
-import { Button } from "../../../components/ui/button"
-import { Separator } from "../../../components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../../components/ui/tooltip"
+import { cn } from "@/lib/utils"
+import { api } from "@/trpc/react"
 
 import { useThreads } from "../../../hooks/use-threads"
 import EmailDisplay from "./email-display"
@@ -33,13 +29,79 @@ type ThreadDisplayProps = {
   emailId?: string | null
 }
 
+function ActionButton({
+  label,
+  disabled,
+  onClick,
+  className,
+  children,
+}: {
+  label: string
+  disabled?: boolean
+  onClick?: () => void
+  className?: string
+  children: React.ReactNode
+}) {
+  return (
+    <Tooltip delayDuration={300}>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onClick}
+          aria-label={label}
+          className={cn(
+            "inline-flex size-9 items-center justify-center rounded-full text-zinc-500",
+            "transition-all duration-200 ease-out",
+            "hover:bg-slate-100 hover:text-zinc-900",
+            "disabled:pointer-events-none disabled:opacity-40",
+            "dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-100",
+            className,
+          )}
+        >
+          {children}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  )
+}
+
 export function ThreadDisplay({
   threadId: threadIdProp,
   emailId: selectedEmailIdProp,
 }: ThreadDisplayProps) {
   const threadId = threadIdProp ?? null
-  const { threads, accountId } = useThreads()
-  const [selectedEmailId, setSelectedEmailId] = React.useState<string | null>(selectedEmailIdProp ?? null)
+  const { threads } = useThreads()
+  const [accountId] = useLocalStorage("accountId", "")
+  const utils = api.useUtils()
+  const [selectedEmailId, setSelectedEmailId] = React.useState<string | null>(
+    selectedEmailIdProp ?? null,
+  )
+
+  const listThread = threads?.find((t) => t.id === threadId)
+
+  const { data: fullThread } = api.account.getThread.useQuery(
+    { accountId, threadId: threadId! },
+    { enabled: Boolean(accountId && threadId) },
+  )
+
+  const thread = fullThread ?? listThread
+  const primaryEmail = thread?.emails?.[0]
+
+  const setDone = api.account.setThreadDone.useMutation({
+    onSuccess: async (result) => {
+      await Promise.all([
+        utils.account.getThreads.invalidate(),
+        utils.account.getNumThreads.invalidate(),
+        utils.account.getThread.invalidate(),
+      ])
+      toast.success(result.done ? "Moved to Done" : "Moved back to Inbox")
+    },
+    onError: (error) => {
+      toast.error(error.message || "Could not update thread")
+    },
+  })
 
   React.useEffect(() => {
     if (selectedEmailIdProp !== undefined) {
@@ -48,145 +110,154 @@ export function ThreadDisplay({
     }
 
     if (!selectedEmailId && threadId) {
-      const thread = threads?.find((t) => t.id === threadId)
       const firstEmailId = thread?.emails?.[0]?.id ?? null
 
       if (firstEmailId !== selectedEmailId) {
         setSelectedEmailId(firstEmailId)
       }
     }
-  }, [selectedEmailIdProp, threadId, selectedEmailId, threads])
+  }, [selectedEmailIdProp, threadId, selectedEmailId, thread])
 
-  const thread = threads?.find((t) => t.id === threadId)
-
-  console.log('DEBUG: ThreadDisplay render', { threadId, accountId, hasThread: !!thread })
+  const isDone = Boolean(fullThread?.done ?? (listThread as { done?: boolean } | undefined)?.done)
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
-      
-      {/* 1. Top Action Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 shrink-0 min-h-14">
+    <div className="flex h-full flex-col overflow-hidden bg-[#F1F5F9]/40 text-foreground dark:bg-zinc-950/90">
+      <div className="flex shrink-0 items-center justify-between px-5 py-3">
         <div className="flex items-center gap-1">
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" disabled={!thread} className="h-9 w-9 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900">
-                <Archive className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Archive</TooltipContent>
-          </Tooltip>
-
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" disabled={!thread} className="h-9 w-9 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900">
-                <ArchiveX className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Junk</TooltipContent>
-          </Tooltip>
-
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" disabled={!thread} className="h-9 w-9 text-zinc-500 dark:text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30">
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Trash</TooltipContent>
-          </Tooltip>
-
-          <Separator orientation="vertical" className="h-4 mx-2 bg-zinc-200 dark:bg-zinc-800" />
-
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" disabled={!thread} className="h-9 w-9 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900">
-                <Clock className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Snooze</TooltipContent>
-          </Tooltip>
+          <ActionButton
+            label={isDone ? "Move to Inbox" : "Archive (Done)"}
+            disabled={!thread || !accountId || setDone.isPending}
+            onClick={() => {
+              if (!threadId || !accountId) return
+              setDone.mutate({
+                accountId,
+                threadId,
+                done: !isDone,
+              })
+            }}
+          >
+            {isDone ? (
+              <ArchiveRestore className="size-4" />
+            ) : (
+              <Archive className="size-4" />
+            )}
+          </ActionButton>
         </div>
 
-        <div className="flex items-center gap-1">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" disabled={!thread} className="h-9 w-9 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900">
-                <MoreVertical className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-              <DropdownMenuItem className="cursor-pointer">Mark as unread</DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer">Star thread</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              disabled={!thread || !accountId || setDone.isPending}
+              aria-label="More actions"
+              className={cn(
+                "inline-flex size-9 items-center justify-center rounded-full text-zinc-500",
+                "transition-all duration-200 ease-out",
+                "hover:bg-slate-100 hover:text-zinc-900",
+                "disabled:pointer-events-none disabled:opacity-40",
+                "dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-100",
+              )}
+            >
+              <MoreVertical className="size-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onClick={() => {
+                if (!threadId || !accountId) return
+                setDone.mutate({
+                  accountId,
+                  threadId,
+                  done: !isDone,
+                })
+              }}
+            >
+              {isDone ? "Move to Inbox" : "Mark as Done"}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {/* 2. Main Body Content */}
       {thread ? (
-        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-          
-          {/* Thread Subject & Primary Sender Block */}
-          <div className="flex items-start justify-between p-6 border-b border-zinc-100 dark:border-zinc-900 bg-white dark:bg-zinc-950 shrink-0">
-            <div className="flex items-start gap-4 min-w-0 flex-1">
-              <ShadcnAvatar className="h-10 w-10 border border-zinc-200 dark:border-zinc-800 shrink-0 shadow-sm">
-                <AvatarFallback className="bg-zinc-100 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 font-semibold text-sm">
-                  {thread.emails?.[0]?.from?.name?.charAt(0) || "E"}
-                </AvatarFallback>
-              </ShadcnAvatar>
-              
-              <div className="space-y-1 min-w-0">
-                <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight line-clamp-1">
-                  {thread.emails?.[0]?.subject || "No Subject"}
-                </h1>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-1 text-sm text-zinc-600 dark:text-zinc-400">
-                  <span className="font-medium text-zinc-900 dark:text-zinc-200 truncate">
-                    {thread.emails?.[0]?.from?.name || "Unknown Sender"}
-                  </span>
-                  <span className="hidden sm:inline text-zinc-300 dark:text-zinc-700">•</span>
-                  <span className="text-xs text-zinc-400 dark:text-zinc-500 truncate">
-                    {thread.emails?.[0]?.from?.address}
-                  </span>
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden px-5 pb-5">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.02)] dark:bg-zinc-900 dark:shadow-[0_4px_24px_rgba(0,0,0,0.25)]">
+            <div className="shrink-0 border-b border-zinc-100 px-4 py-2.5 dark:border-zinc-800/60">
+              <div className="flex min-w-0 items-start gap-2">
+                <ShadcnAvatar className="size-8 shrink-0 ring-1 ring-zinc-200/70 dark:ring-zinc-700/60">
+                  <AvatarFallback className="bg-slate-100 text-[11px] font-semibold text-zinc-800 dark:bg-zinc-800 dark:text-zinc-100">
+                    {primaryEmail?.from?.name?.charAt(0) || "E"}
+                  </AvatarFallback>
+                </ShadcnAvatar>
+
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <h1 className="line-clamp-2 min-w-0 flex-1 text-base font-semibold leading-snug tracking-tight text-zinc-900 dark:text-zinc-50">
+                      {primaryEmail?.subject || "No Subject"}
+                    </h1>
+                    {primaryEmail?.sentAt && (
+                      <time
+                        dateTime={new Date(primaryEmail.sentAt).toISOString()}
+                        className="shrink-0 font-mono text-[10px] leading-none tabular-nums text-zinc-400 dark:text-zinc-500"
+                      >
+                        {format(new Date(primaryEmail.sentAt), "MMM d, h:mm a")}
+                      </time>
+                    )}
+                  </div>
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 text-xs leading-tight text-zinc-500 dark:text-zinc-400">
+                    <span className="truncate font-medium text-zinc-600 dark:text-zinc-300">
+                      {primaryEmail?.from?.name || "Unknown Sender"}
+                    </span>
+                    <span className="text-zinc-300 dark:text-zinc-600">•</span>
+                    <span className="truncate">
+                      {primaryEmail?.from?.address}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {thread.emails?.[0]?.sentAt && (
-              <div className="text-[11px] text-zinc-400 dark:text-zinc-500 font-medium whitespace-nowrap pl-4 pt-1.5">
-                {format(new Date(thread.emails[0].sentAt), "MMM d, yyyy, h:mm a")}
+            <div className="scrollbar-elegant min-h-0 flex-1 overflow-y-auto px-4 py-3">
+              <div className="mx-auto w-full max-w-[720px] space-y-6">
+                {thread.emails.map((email) => (
+                  <EmailDisplay
+                    key={email.id}
+                    email={{
+                      ...email,
+                      body:
+                        "body" in email
+                          ? (email.body as string | null | undefined) ?? undefined
+                          : ("bodySnippet" in email
+                              ? (email.bodySnippet as string | undefined)
+                              : undefined),
+                      attachments:
+                        "attachments" in email
+                          ? (email.attachments as
+                              | {
+                                  id: string
+                                  name: string
+                                  mimeType: string
+                                  size: number
+                                  inline: boolean
+                                }[]
+                              | undefined)
+                          : undefined,
+                    }}
+                  />
+                ))}
               </div>
-            )}
+            </div>
           </div>
 
-          {/* 3. Core Scrollable Email Stack */}
-          <div className="flex-1 min-h-0 overflow-y-auto bg-zinc-50/40 dark:bg-zinc-900/10 px-6 py-4 space-y-4">
-            {thread.emails.map((email, index) => (
-              <div 
-                key={email.id} 
-                className={`w-full ${
-                  index !== thread.emails.length - 1 ? 'border-b border-zinc-100 dark:border-zinc-900 pb-4' : ''
-                }`}
-              >
-                <EmailDisplay
-                  email={{
-                    ...email,
-                    body: email.body ?? undefined,
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-
-          {/* 4. Fixed Bottom Premium Reply Box */}
-          <div className="w-full bg-white dark:bg-zinc-950 shrink-0 border-t border-zinc-200 dark:border-zinc-800 p-4">
+          <div className="shrink-0">
             <ReplyBox />
           </div>
-
         </div>
       ) : (
-        <div className="flex h-full flex-col items-center justify-center p-8 text-center text-zinc-400 dark:text-zinc-500 gap-2">
-          <p className="text-sm font-medium tracking-tight">No conversation selected</p>
-          <p className="text-xs text-zinc-400 dark:text-zinc-600 max-w-xs">
-            Choose an email thread from the sidebar list to view the full message details.
+        <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center text-zinc-500 dark:text-zinc-400">
+          <p className="text-sm font-semibold">No conversation selected</p>
+          <p className="max-w-xs text-xs leading-relaxed">
+            Choose an email thread from the list to view the full message.
           </p>
         </div>
       )}

@@ -1,4 +1,5 @@
 import { accountRouter } from "@/server/api/routers/account"; // 🌟 Humne apna account router import kiya
+import { billingRouter } from "@/server/api/routers/billing";
 import { mailRouter } from "@/server/api/routers/mail";
 import { searchRouter } from "@/server/api/routers/search";
 import { createTRPCRouter } from "@/server/api/trpc";
@@ -9,6 +10,7 @@ import { createTRPCRouter } from "@/server/api/trpc";
  */
 export const appRouter = createTRPCRouter({
   account: accountRouter, // 🌟 Is line se accountRouter poore project ke liye register ho gaya!
+  billing: billingRouter,
   mail: mailRouter,
   search: searchRouter,
 });

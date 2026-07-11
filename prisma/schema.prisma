@@ -29,6 +29,12 @@ enum Role {
   admin
 }
 
+enum SyncStatus {
+  idle
+  syncing
+  error
+}
+
 model Account {
   id             String         @id
   accessToken    String         @unique
@@ -37,6 +43,8 @@ model Account {
   userId         String
   nextDeltaToken String?
   binaryIndex    String?
+  syncStatus     SyncStatus     @default(idle)
+  lastSyncedAt   DateTime?
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   emails         Email[]
   emailAddresses EmailAddress[]
@@ -101,6 +109,7 @@ model Email {
   to                   EmailAddress[]        @relation("ToEmails")
 
   @@index([threadId])
+  @@index([accountId])
   @@index([emailLabel])
   @@index([sentAt])
 }

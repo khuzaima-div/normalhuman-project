@@ -26,8 +26,8 @@ export async function createCheckoutSession() {
             },
         ],
         mode: 'subscription',
-        success_url: `${process.env.NEXT_PUBLIC_URL}/mail`,
-        cancel_url: `${process.env.NEXT_PUBLIC_URL}/pricing`,
+        success_url: `${process.env.NEXT_PUBLIC_APP_URL}/mail`,
+        cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/mail`,
         client_reference_id: userId,
         metadata: {
             userId: userId,
@@ -50,7 +50,7 @@ export async function createBillingPortalSession() {
     const { userId } = await auth();
     
     if (!userId) {
-        return false;
+        throw new Error('User not authenticated');
     }
 
     // Database se user ki stripe details fetch ho rahi hain
@@ -64,7 +64,7 @@ export async function createBillingPortalSession() {
 
     const session = await stripe.billingPortal.sessions.create({
         customer: subscription.customerId,
-        return_url: `${process.env.NEXT_PUBLIC_URL}/pricing`,
+        return_url: `${process.env.NEXT_PUBLIC_APP_URL}/mail`,
     });
 
     redirect(session.url!);

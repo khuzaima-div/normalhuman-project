@@ -104,5 +104,4 @@ const TagInput: React.FC<TagInputProps> = ({ suggestions, defaultValues = [], la
         </div>
     );
 };
-
 export default TagInput;

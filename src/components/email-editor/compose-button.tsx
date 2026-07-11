@@ -38,6 +38,7 @@ const ComposeButton = () => {
         };
     }, []);
 
+    const utils = api.useUtils()
     const sendEmail = api.mail.sendEmail.useMutation()
 
     const handleSend = async (value: string) => {
@@ -57,8 +58,9 @@ const ComposeButton = () => {
             replyTo: { name: account?.name ?? 'Me', address: account?.emailAddress ?? 'me@example.com' },
             inReplyTo: undefined,
         }, {
-            onSuccess: () => {
+            onSuccess: async () => {
                 toast.success("Email sent successfully")
+                await utils.account.getThreads.invalidate()
                 // Reset states after successful tracking
                 setToValues([])
                 setCcValues([])
@@ -111,7 +113,7 @@ const ComposeButton = () => {
                         isSending={sendEmail.isPending}
 
                         defaultToolbarExpanded={true}
-                        fromName={account?.name}
+                        fromName={account?.name ?? undefined}
                     />
                 </div>
             </DrawerContent>

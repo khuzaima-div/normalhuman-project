@@ -1,5 +1,30 @@
-// src/lib/types.ts
+// src/types.ts
 import { z } from "zod";
+
+export type MailView = "inbox" | "draft" | "sent";
+export type InboxFilter = "active" | "done";
+
+export interface OramaEmailDocument {
+  id?: string;
+  title?: string;
+  body?: string;
+  rawBody?: string;
+  from?: string;
+  to?: string[];
+  sentAt?: string;
+  threadId: string;
+}
+
+export interface OramaSearchHit {
+  id: string;
+  score: number;
+  document: OramaEmailDocument;
+}
+
+export interface OramaSearchResult {
+  hits: OramaSearchHit[];
+  count?: number;
+}
 
 export interface SyncResponse {
     syncUpdatedToken: string;

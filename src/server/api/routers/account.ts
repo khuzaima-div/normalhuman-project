@@ -1,16 +1,16 @@
 import { z } from "zod"
 import { createTRPCRouter, privateProcedure } from "../trpc"
-import { PrismaClient } from "@prisma/client"
+import type { AppPrismaClient } from "@/server/db"
 import { TRPCError } from "@trpc/server"
-import { OramaManager } from "@/server/orama"
+import { recoverStaleSyncStatus } from "@/lib/run-initial-sync"
 
 /**
  * Type-safe access validator mapping Prisma client interface structures explicitly
  */
 export const authoriseAccountAccess = async (
-    accountId: string, 
-    userId: string, 
-    db: PrismaClient
+    accountId: string,
+    userId: string,
+    db: AppPrismaClient
 ) => {
     const account = await db.account.findFirst({
         where: {
@@ -24,21 +24,23 @@ export const authoriseAccountAccess = async (
             accessToken: true,
         }
     })
-    if (!account) throw new Error('Account not found')
+    if (!account) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Account not found" })
+    }
     return account
 }
 
 export const accountRouter = createTRPCRouter({
-    // Get accounts router query
     getAccounts: privateProcedure.query(async ({ ctx }) => {
+        await recoverStaleSyncStatus()
+
         return await ctx.db.account.findMany({
             where: { userId: ctx.auth.userId },
             orderBy: { id: 'desc' },
-            select: { id: true, emailAddress: true, name: true }
+            select: { id: true, emailAddress: true, name: true, syncStatus: true, lastSyncedAt: true }
         })
     }),
 
-    // Get live threads count router query
     getNumThreads: privateProcedure
         .input(z.object({
             accountId: z.string(),
@@ -47,17 +49,18 @@ export const accountRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId, ctx.db)
 
-            let filter: Record<string, any> = {}
-            const currentTab = input.tab ?? 'inbox';
+            const filter: Record<string, boolean> = {}
+            const currentTab = input.tab ?? 'inbox'
 
             if (currentTab === 'inbox') {
                 filter.inboxStatus = true
+                filter.done = false
             } else if (currentTab === 'draft') {
                 filter.draftStatus = true
             } else if (currentTab === 'sent') {
                 filter.sentStatus = true
             } else if (currentTab === 'done') {
-                filter.doneStatus = true
+                filter.done = true
             }
 
             return await ctx.db.thread.count({
@@ -68,26 +71,27 @@ export const accountRouter = createTRPCRouter({
             })
         }),
 
-    // Dynamic threads fetching procedure
     getThreads: privateProcedure
         .input(z.object({
             accountId: z.string(),
-            tab: z.string().nullish().default("inbox"),
-            done: z.boolean().nullish().default(false)
+            view: z.enum(["inbox", "draft", "sent"]).nullish().default("inbox"),
+            done: z.boolean().nullish().default(false),
+            /** @deprecated use view */
+            tab: z.string().nullish(),
         }))
         .query(async ({ ctx, input }) => {
             const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId, ctx.db)
 
-            const safeTab = input.tab ?? "inbox";
-            const safeDone = input.done ?? false;
+            const safeView = (input.view ?? input.tab ?? "inbox") as "inbox" | "draft" | "sent"
+            const safeDone = input.done ?? false
 
-            let filter: Record<string, any> = {}
+            const filter: Record<string, boolean> = {}
 
-            if (safeTab === 'inbox') {
+            if (safeView === 'inbox') {
                 filter.inboxStatus = true
-            } else if (safeTab === 'draft') {
+            } else if (safeView === 'draft') {
                 filter.draftStatus = true
-            } else if (safeTab === 'sent') {
+            } else if (safeView === 'sent') {
                 filter.sentStatus = true
             }
 
@@ -105,13 +109,13 @@ export const accountRouter = createTRPCRouter({
                         },
                         select: {
                             from: true,
-                            body: true,
                             bodySnippet: true,
                             emailLabel: true,
                             subject: true,
                             sysLabels: true,
                             id: true,
-                            sentAt: true
+                            sentAt: true,
+                            hasAttachments: true,
                         }
                     }
                 },
@@ -122,34 +126,89 @@ export const accountRouter = createTRPCRouter({
             })
         }),
 
-    // 🔥 ELLIOTT'S ORAMA FULL-TEXT SEARCH MUTATION (From image_6278be.jpg)
-    searchEmails: privateProcedure
+    /** Full thread with bodies + attachments for the reading pane */
+    getThread: privateProcedure
         .input(z.object({
             accountId: z.string(),
-            query: z.string(),
+            threadId: z.string(),
         }))
-        .mutation(async ({ ctx, input }) => {
-            // 1. Check permissions safely
+        .query(async ({ ctx, input }) => {
             const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId, ctx.db)
-            
-            // 2. Initialize Orama Client for this specific account
-            const orama = new OramaManager(account.id)
-            await orama.initialize()
-            
-            // 3. Search full-text logs using the query string term
-            const results = await orama.search({ term: input.query })
-            
-            return results
+
+            const thread = await ctx.db.thread.findFirst({
+                where: {
+                    id: input.threadId,
+                    accountId: account.id,
+                },
+                include: {
+                    emails: {
+                        orderBy: { sentAt: 'asc' },
+                        select: {
+                            id: true,
+                            from: true,
+                            body: true,
+                            bodySnippet: true,
+                            emailLabel: true,
+                            subject: true,
+                            sysLabels: true,
+                            sentAt: true,
+                            hasAttachments: true,
+                            attachments: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    mimeType: true,
+                                    size: true,
+                                    inline: true,
+                                }
+                            }
+                        }
+                    }
+                }
+            })
+
+            if (!thread) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Thread not found" })
+            }
+
+            return thread
         }),
 
-    // Auto-Suggestions Fetcher Pattern
+    setThreadDone: privateProcedure
+        .input(z.object({
+            accountId: z.string(),
+            threadId: z.string(),
+            done: z.boolean(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId, ctx.db)
+
+            const thread = await ctx.db.thread.findFirst({
+                where: {
+                    id: input.threadId,
+                    accountId: account.id,
+                },
+                select: { id: true },
+            })
+
+            if (!thread) {
+                throw new TRPCError({ code: "NOT_FOUND", message: "Thread not found" })
+            }
+
+            return await ctx.db.thread.update({
+                where: { id: thread.id },
+                data: { done: input.done },
+                select: { id: true, done: true },
+            })
+        }),
+
     getSuggestions: privateProcedure
         .input(z.object({
             accountId: z.string(),
         }))
         .query(async ({ ctx, input }) => {
-            const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId, ctx.db);
-            
+            const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId, ctx.db)
+
             return await ctx.db.emailAddress.findMany({
                 where: {
                     accountId: account.id
@@ -158,21 +217,21 @@ export const accountRouter = createTRPCRouter({
                     address: true,
                     name: true
                 }
-            });
+            })
         }),
 
-    // Perfect Reply Metadatas Dynamic Resolver
     getReplyDetails: privateProcedure
         .input(z.object({
             accountId: z.string(),
             threadId: z.string(),
         }))
         .query(async ({ ctx, input }) => {
-            const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId, ctx.db);
-            
+            const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId, ctx.db)
+
             const thread = await ctx.db.thread.findFirst({
                 where: {
                     id: input.threadId,
+                    accountId: account.id,
                 },
                 include: {
                     emails: {
@@ -189,16 +248,16 @@ export const accountRouter = createTRPCRouter({
                         }
                     }
                 }
-            });
+            })
 
             if (!thread || thread.emails.length === 0) {
-                throw new TRPCError({ code: "NOT_FOUND", message: "Thread not found" });
+                throw new TRPCError({ code: "NOT_FOUND", message: "Thread not found" })
             }
 
-            const fallbackEmail = thread.emails[thread.emails.length - 1]!;
+            const fallbackEmail = thread.emails[thread.emails.length - 1]!
             const lastExternalEmail = [...thread.emails].reverse().find(
                 email => email.from.address !== account.emailAddress
-            ) ?? fallbackEmail;
+            ) ?? fallbackEmail
 
             return {
                 subject: lastExternalEmail.subject,
@@ -206,6 +265,6 @@ export const accountRouter = createTRPCRouter({
                 cc: lastExternalEmail.cc.filter(cc => cc.address !== account.emailAddress),
                 from: { name: account.name, address: account.emailAddress },
                 id: lastExternalEmail.internetMessageId,
-            };
+            }
         }),
 })

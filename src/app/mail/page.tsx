@@ -1,27 +1,38 @@
-"use client"
+import { auth } from "@clerk/nextjs/server"
+import { redirect } from "next/navigation"
+import { db } from "@/server/db"
+import { MailErrorBoundary } from "@/components/mail/error-boundary"
+import Mail from "./mail"
 
-// src/app/mail/page.tsx
-import dynamic from 'next/dynamic'
-import React from 'react'
+export default async function MailDashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ accountLimit?: string; accountId?: string }>
+}) {
+  const { userId } = await auth()
+  if (!userId) {
+    redirect("/sign-in")
+  }
 
-// Hydration issues se bachne ke liye Mail component bina SSR ke dynamically load ho raha hai
-const Mail = dynamic(() => {
-    return import('./mail')
-}, {
-    ssr: false
-})
+  const accounts = await db.account.findMany({
+    where: { userId },
+    select: { id: true },
+  })
 
-const MailDashboard = () => {
-    return (
-        <>
-            {/* Main Resizable Mail Component Panel */}
-            <Mail
-                defaultLayout={[20, 32, 48]}
-                defaultCollapsed={false}
-                navCollapsedSize={4}
-            />
-        </>
-    )
+  if (accounts.length === 0) {
+    redirect("/")
+  }
+
+  const params = await searchParams
+
+  return (
+    <MailErrorBoundary>
+      <Mail
+        defaultLayout={[20, 32, 48]}
+        defaultCollapsed={false}
+        navCollapsedSize={4}
+        accountLimitReached={params.accountLimit === "reached"}
+      />
+    </MailErrorBoundary>
+  )
 }
-
-export default MailDashboard

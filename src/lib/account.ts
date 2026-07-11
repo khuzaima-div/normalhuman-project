@@ -6,6 +6,39 @@ import { syncEmailsToDatabase } from './sync-to-db';
 
 const API_BASE_URL = 'https://api.aurinko.io/v1';
 
+/** Map Aurinko HTTP errors to user-facing messages. */
+export function mapAurinkoError(error: unknown): Error {
+    if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const code =
+            typeof error.response?.data === "object" &&
+            error.response?.data !== null &&
+            "code" in error.response.data
+                ? String((error.response.data as { code?: string }).code)
+                : undefined;
+
+        if (status === 402 || code === "payment.required") {
+            return new Error(
+                "Aurinko payment required — check your Aurinko plan.",
+            );
+        }
+        if (status === 401 || status === 403) {
+            return new Error(
+                "Aurinko authorization failed — reconnect your email account.",
+            );
+        }
+        const message =
+            typeof error.response?.data === "object" &&
+            error.response?.data !== null &&
+            "message" in error.response.data
+                ? String((error.response.data as { message?: string }).message)
+                : error.message;
+        return new Error(message || "Aurinko request failed");
+    }
+    if (error instanceof Error) return error;
+    return new Error("Aurinko request failed");
+}
+
 class Account {
     private token: string;
 
@@ -14,43 +47,52 @@ class Account {
     }
 
     private async startSync(daysWithin: number): Promise<SyncResponse> {
-        const response = await axios.post<SyncResponse>(
-            `${API_BASE_URL}/email/sync`,
-            {},
-            {
-                headers: { Authorization: `Bearer ${this.token}` }, 
-                params: {
-                    daysWithin,
-                    bodyType: 'html'
+        try {
+            const response = await axios.post<SyncResponse>(
+                `${API_BASE_URL}/email/sync`,
+                {},
+                {
+                    headers: { Authorization: `Bearer ${this.token}` },
+                    params: {
+                        daysWithin,
+                        bodyType: 'html'
+                    }
                 }
-            }
-        );
-        return response.data;
+            );
+            return response.data;
+        } catch (error) {
+            throw mapAurinkoError(error);
+        }
     }
 
  async createSubscription() {
-        // 🌟 PROFESSIONAL DYNAMIC TUNNEL CONFIGURATION
-        // Agar aapke paas koi live tunnel chal raha ha, to uska URL yahan paste karein. 
-        // Agar tunnel nahi chalana, to bas isko khali string "" chhor dein, system crash nahi karega!
-        let webhookUrl = "https://unslow-marquitta-noncandescently.ngrok-free.dev"; 
+        const webhookUrl = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "");
 
-        // Clean trailing slashes if any
-        webhookUrl = webhookUrl.trim().replace(/\/$/, "");
-            
-        // Agar url invalid ha ya temporary band ha, to isko development mein warning de kar skip karenge
-        if (!webhookUrl || webhookUrl.includes("potatoes-calculator-reports-crisis")) {
-            console.warn("⚠️ [Aurinko Subscription] Cloudflare Tunnel link is inactive or placeholder. Skipping webhook registration for safe local debugging.");
-            return { mocked: true, message: "Subscription skipped in local development mode." };
+        if (!webhookUrl) {
+            console.warn("⚠️ [Aurinko Subscription] NEXT_PUBLIC_APP_URL is not set. Skipping webhook registration.");
+            return { mocked: true, message: "Subscription skipped: NEXT_PUBLIC_APP_URL not configured." };
         }
 
-        console.log(`📡 Attempting to register Aurinko Webhook at: ${webhookUrl}/api/aurinko/webhook`);
+        const hostname = new URL(webhookUrl).hostname;
+        if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1") {
+            console.warn(
+                "⚠️ [Aurinko Subscription] Local URLs are not reachable by Aurinko. " +
+                "Skipping webhook registration; local polling will continue to sync mail.",
+            );
+            return {
+                mocked: true,
+                message: "Subscription skipped: NEXT_PUBLIC_APP_URL must be publicly reachable.",
+            };
+        }
+
+        const notificationUrl = `${webhookUrl}/api/aurinko/webhook`;
 
         try {
             const res = await axios.post(
                 `${API_BASE_URL}/subscriptions`,
                 {
                     resource: '/email/messages',
-                    notificationUrl: webhookUrl + '/api/aurinko/webhook'
+                    notificationUrl,
                 },
                 {
                     headers: {
@@ -76,7 +118,36 @@ class Account {
         }) as any; // 🌟 FIXED: Type-cast to bypass custom output path cache discrepancies
         
         if (!account) throw new Error("Invalid token");
-        if (!account.nextDeltaToken) throw new Error("No delta token");
+
+        // Without a delta token, delta sync cannot run — seed via initial sync instead.
+        if (!account.nextDeltaToken) {
+            console.warn(
+                `[syncEmails] Account ${account.id} has null nextDeltaToken; falling back to initial sync override.`,
+            );
+            const initial = await this.performInitialSync();
+            if (initial?.emails?.length) {
+                await syncEmailsToDatabase(initial.emails, account.id);
+            }
+            if (initial?.deltaToken) {
+                await db.account.update({
+                    where: { id: account.id },
+                    data: {
+                        nextDeltaToken: initial.deltaToken,
+                        syncStatus: "idle",
+                        lastSyncedAt: new Date(),
+                    } as any,
+                });
+            } else {
+                await db.account.update({
+                    where: { id: account.id },
+                    data: {
+                        syncStatus: "idle",
+                        lastSyncedAt: new Date(),
+                    } as any,
+                });
+            }
+            return;
+        }
         
         let response = await this.getUpdatedEmails({ deltaToken: account.nextDeltaToken });
         let allEmails: EmailMessage[] = response.records || [];
@@ -92,12 +163,8 @@ class Account {
             }
         }
 
-        try {
-            if (allEmails.length > 0) {
-                await syncEmailsToDatabase(allEmails, account.id);
-            }
-        } catch (error) {
-            console.log('Error writing delta emails to database:', error);
+        if (allEmails.length > 0) {
+            await syncEmailsToDatabase(allEmails, account.id);
         }
 
         await db.account.update({
@@ -106,6 +173,8 @@ class Account {
             },
             data: {
                 nextDeltaToken: storedDeltaToken,
+                syncStatus: "idle",
+                lastSyncedAt: new Date(),
             } as any
         });
     }
@@ -130,7 +199,7 @@ class Account {
 
     async performInitialSync() {
         try {
-            const daysWithin = 5;
+            const daysWithin = 30;
             let syncResponse = await this.startSync(daysWithin);
 
             while (!syncResponse.ready) {
@@ -176,7 +245,7 @@ class Account {
             } else {
                 console.error('Error during sync:', error);
             }
-            throw error;
+            throw mapAurinkoError(error);
         }
     }
 
@@ -226,7 +295,6 @@ class Account {
                 }
             );
 
-            console.log('sendmail', response.data);
             return response.data;
         } catch (error) {
             if (axios.isAxiosError(error)) {

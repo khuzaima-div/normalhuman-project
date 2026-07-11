@@ -1,0 +1,19 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:3000",
+  "loginUser": "thekhuzaima0@gmail.com",
+  "loginPassword": "Badshah.45450",
+  "executionArgs": {
+    "projectName": "normalhuman",
+    "projectPath": "D:\\Web development\\Coding\\normalhuman",
+    "testIds": [],
+    "additionalInstruction": "",
+    "serverMode": "development",
+    "envs": {
+      "API_KEY": "sk-user-9uNSglNC6F-m_EduC9h0l2owxmJlBhWw8mdkdudXxHfmOAWzPTTiVjxXOZz5RQb6oO5EpQVGTGgO_SoeJx0pD-n_Pb5HzjasFmu6GW42ojJmqel1lT5EQFctJ3YsMVik-jk"
+    }
+  },
+  "serverPort": 62131
+}

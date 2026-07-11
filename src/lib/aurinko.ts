@@ -5,19 +5,29 @@ import { auth } from "@clerk/nextjs/server";
 
 /**
  * 1. Generate Aurinko Authorization URL
+ *
+ * IMAP and Google/Office365 both use Aurinko unified scopes (PascalCase Mail.*).
  */
-export const getAurinkoAuthUrl = async (serviceType: 'Google' | 'Office365') => {
+export const getAurinkoAuthUrl = async (serviceType: 'Google' | 'Office365' | 'IMAP') => {
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
+  const clientId = process.env.AURINKO_CLIENT_ID as string;
+  const returnUrl = "http://localhost:3000/api/aurinko/callback";
+
   const params = new URLSearchParams({
-    clientId: process.env.AURINKO_CLIENT_ID as string,
-    serviceType: serviceType,
-    scopes: 'Mail.Read Mail.ReadWrite Mail.Send Mail.Drafts Mail.All',
+    clientId,
+    serviceType,
     responseType: 'code',
-    returnUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/aurinko/callback`,
-    userUserId: userId, // Callback route mein Clerk ID track karne ke liye
+    returnUrl,
+    state: userId,
   });
+
+  if (serviceType === 'IMAP') {
+    params.set('scopes', 'Mail.Read');
+  } else {
+    params.set('scopes', 'Mail.Read Mail.ReadWrite Mail.Send Mail.Drafts Mail.All');
+  }
 
   return `https://api.aurinko.io/v1/auth/authorize?${params.toString()}`;
 };

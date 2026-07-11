@@ -6,12 +6,11 @@ import { createStreamableValue } from 'ai/rsc';
 
 // 1. FULL EMAIL RE-WRITE ENGINE (Using system blocks + Markdown context parsing)
 export async function generateEmail(context: string, prompt: string) {
-    console.log("context parsed size:", context.length);
     const stream = createStreamableValue('');
 
     (async () => {
         const { textStream } = await streamText({
-            model: openai('gpt-4-turbo'),
+            model: openai('gpt-4-turbo') as Parameters<typeof streamText>[0]['model'],
             prompt: `
 You are an AI email assistant embedded in an email client app. Your purpose is to help the user compose or reply to emails perfectly.
 
@@ -49,7 +48,7 @@ export async function generate(currentText: string, subject: string, recipient: 
 
     (async () => {
         const { textStream } = await streamText({
-            model: openai('gpt-4-turbo'),
+            model: openai('gpt-4-turbo') as Parameters<typeof streamText>[0]['model'],
             prompt: `
 You are an AI email assistant that helps users write, continue, and improve email content.
 

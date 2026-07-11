@@ -189,5 +189,4 @@ const TipTapMenuBar = ({ editor }: { editor: Editor }) => {
         </div>
     );
 };
-
 export default TipTapMenuBar;

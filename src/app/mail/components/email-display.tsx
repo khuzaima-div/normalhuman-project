@@ -3,9 +3,18 @@
 import React from 'react'
 import Avatar from 'react-avatar'
 import { Letter } from 'react-letter'
+import { Paperclip } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { useThreads } from '../../../hooks/use-threads'
+
+type AttachmentInfo = {
+  id: string
+  name: string
+  mimeType: string
+  size: number
+  inline: boolean
+}
 
 type Props = {
   email: {
@@ -16,7 +25,14 @@ type Props = {
       name?: string | null
       address: string
     }
+    attachments?: AttachmentInfo[]
   }
+}
+
+function formatBytes(size: number) {
+  if (size < 1024) return `${size} B`
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`
 }
 
 export default function EmailDisplay({ email }: Props) {
@@ -25,7 +41,6 @@ export default function EmailDisplay({ email }: Props) {
 
   React.useEffect(() => {
     if (letterRef.current) {
-      // Elliot's original logic: Gmail specific repetitive thread quotes cleaning
       const gmailQuote = letterRef.current.querySelector('div[class*="_gmail_quote"]')
       if (gmailQuote) {
         gmailQuote.innerHTML = ''
@@ -34,6 +49,7 @@ export default function EmailDisplay({ email }: Props) {
   }, [email])
 
   const isMe = account?.emailAddress === email.from.address
+  const attachments = (email.attachments ?? []).filter((a) => !a.inline)
 
   return (
     <div 
@@ -70,13 +86,27 @@ export default function EmailDisplay({ email }: Props) {
       
       <div className="h-4"></div>
       
-      {/* Premium Rich Text Render Layer Box */}
       <div className="rounded-lg overflow-hidden border border-zinc-100 dark:border-zinc-900/60 p-1 bg-white">
         <Letter 
           className='bg-white text-zinc-900 rounded-md text-sm' 
           html={email?.body ?? ""} 
         />
       </div>
+
+      {attachments.length > 0 && (
+        <ul className="mt-3 space-y-1.5 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+          {attachments.map((attachment) => (
+            <li
+              key={attachment.id}
+              className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300"
+            >
+              <Paperclip className="size-3.5 shrink-0 text-zinc-400" />
+              <span className="min-w-0 truncate font-medium">{attachment.name}</span>
+              <span className="shrink-0 text-zinc-400">{formatBytes(attachment.size)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

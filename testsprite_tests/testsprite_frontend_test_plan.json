@@ -1,0 +1,808 @@
+[
+  {
+    "id": "TC001",
+    "title": "Authenticate and reach the mail experience",
+    "description": "This verifies that a user can sign in and land in the authenticated mail experience.",
+    "category": "User Authentication",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /sign-in"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the authenticated mail experience is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC002",
+    "title": "Open the inbox after linking a Google account",
+    "description": "This verifies that a signed-in user with a linked inbox can return to the app and see syncing start in the inbox experience.",
+    "category": "Link Google Email Account",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click the control to connect a Google account"
+      },
+      {
+        "type": "action",
+        "description": "Complete the account linking flow"
+      },
+      {
+        "type": "action",
+        "description": "Return to the app"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the inbox sync state is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the mail experience is available"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC003",
+    "title": "Protect the mail experience from unauthenticated access",
+    "description": "This verifies that an unauthenticated visitor is redirected to sign in when trying to access the protected mail area.",
+    "category": "User Authentication",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /mail"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the sign-in experience is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC004",
+    "title": "Show the onboarding state for a signed-in user without a linked inbox",
+    "description": "This verifies that a signed-in user who has not linked a Google inbox sees the onboarding prompt instead of the mail client.",
+    "category": "Link Google Email Account",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /sign-in"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the account linking prompt is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC005",
+    "title": "Compose a new email and send it successfully",
+    "description": "An authenticated user with a linked inbox can open a new draft, fill in the message details, send it, and see the sent confirmation.",
+    "category": "Compose and Reply Email",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "action",
+        "description": "Open the mail client"
+      },
+      {
+        "type": "action",
+        "description": "Open a new email draft"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a recipient into the recipients field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a subject into the subject field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a message body into the email editor"
+      },
+      {
+        "type": "action",
+        "description": "Send the email"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a sent confirmation is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the draft is cleared or closed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC006",
+    "title": "Open and read an email thread",
+    "description": "This verifies that a linked user can select a thread and read its message content in the reading pane.",
+    "category": "Mail Inbox Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /sign-in"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /mail"
+      },
+      {
+        "type": "action",
+        "description": "Select an email thread from the thread list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selected thread is displayed in the reading pane"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify message content is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC007",
+    "title": "Browse folders in the three-pane inbox",
+    "description": "This verifies that a linked user can open the mail dashboard and switch between mailbox folders in the three-pane layout.",
+    "category": "Mail Inbox Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /sign-in"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /mail"
+      },
+      {
+        "type": "action",
+        "description": "Click the folder or mailbox navigation control"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the three-pane inbox layout is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify mailbox threads are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC008",
+    "title": "Search finds matching emails",
+    "description": "This verifies that a user can search synced mail and see matching email results.",
+    "category": "Email Search",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /mail"
+      },
+      {
+        "type": "action",
+        "description": "Focus the search input"
+      },
+      {
+        "type": "action",
+        "description": "Type a search query into the search field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify matching search results are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC009",
+    "title": "Reply to an existing thread and send the response",
+    "description": "An authenticated user with a linked inbox can open a thread, reveal the reply editor, send a reply, and return to the thread view with the response added.",
+    "category": "Compose and Reply Email",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "action",
+        "description": "Open the mail client"
+      },
+      {
+        "type": "action",
+        "description": "Open an email thread"
+      },
+      {
+        "type": "action",
+        "description": "Open the reply editor"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a reply message into the email editor"
+      },
+      {
+        "type": "action",
+        "description": "Send the response"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a sent confirmation is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the reply appears in the thread"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC010",
+    "title": "Search synced mail and return to the normal thread list",
+    "description": "This verifies that a user can search synced email, open a matching thread, clear the search, and return to the normal thread list.",
+    "category": "Mail Inbox Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /sign-in"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /mail"
+      },
+      {
+        "type": "action",
+        "description": "Fill in a search term that matches a synced email into the mail search field"
+      },
+      {
+        "type": "action",
+        "description": "Select a matching thread from the search results"
+      },
+      {
+        "type": "action",
+        "description": "Clear the search field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the normal thread list is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selected thread can be browsed in the inbox experience"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC011",
+    "title": "Account switching updates the inbox view",
+    "description": "This verifies that a user can switch between linked accounts and see the thread list refresh for the newly selected inbox.",
+    "category": "Account Switching",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /mail"
+      },
+      {
+        "type": "action",
+        "description": "Open the account switcher"
+      },
+      {
+        "type": "action",
+        "description": "Select a different linked account"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the thread list updates for the selected account"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC012",
+    "title": "Mark a thread as done and move it back to inbox",
+    "description": "This verifies that a user can toggle a thread between done and inbox states from the mail dashboard.",
+    "category": "Mail Inbox Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /sign-in"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /mail"
+      },
+      {
+        "type": "action",
+        "description": "Select an email thread from the thread list"
+      },
+      {
+        "type": "action",
+        "description": "Toggle the thread to the done state"
+      },
+      {
+        "type": "action",
+        "description": "Toggle the thread back to the inbox state"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the thread remains available in the inbox experience"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC013",
+    "title": "Search can be cleared to return to the inbox list",
+    "description": "This verifies that clearing an active search returns the user to the normal thread list.",
+    "category": "Email Search",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /mail"
+      },
+      {
+        "type": "action",
+        "description": "Focus the search input"
+      },
+      {
+        "type": "action",
+        "description": "Type a search query into the search field"
+      },
+      {
+        "type": "action",
+        "description": "Clear the search field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the normal thread list is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC014",
+    "title": "Use AI assistance to draft a new email",
+    "description": "An authenticated user with a linked inbox can open a draft, request AI help, review the generated text, and send the email successfully.",
+    "category": "Compose and Reply Email",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "action",
+        "description": "Open the mail client"
+      },
+      {
+        "type": "action",
+        "description": "Open a new email draft"
+      },
+      {
+        "type": "action",
+        "description": "Request AI assistance for the draft"
+      },
+      {
+        "type": "action",
+        "description": "Review the suggested draft content"
+      },
+      {
+        "type": "action",
+        "description": "Send the email"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a sent confirmation is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the AI-generated content was used in the draft"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC015",
+    "title": "Keyboard shortcut opens search",
+    "description": "This verifies that the search interface can be opened with the keyboard shortcut and used to review results.",
+    "category": "Email Search",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /mail"
+      },
+      {
+        "type": "action",
+        "description": "Press the keyboard shortcut to open search"
+      },
+      {
+        "type": "action",
+        "description": "Type a search query into the search field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify matching search results are displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC016",
+    "title": "Start the upgrade checkout flow",
+    "description": "An authenticated user can open billing and start an upgrade checkout from the app.",
+    "category": "Subscription and Billing",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "action",
+        "description": "Open the mail client"
+      },
+      {
+        "type": "action",
+        "description": "Open the billing or plan section"
+      },
+      {
+        "type": "action",
+        "description": "Start the upgrade process"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the checkout flow is started"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an upgrade path is presented"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC017",
+    "title": "Ask AI suggested prompt returns a response",
+    "description": "This verifies that a user can open Ask AI, choose a suggested prompt, and read a streamed answer based on email context.",
+    "category": "Ask AI Chat",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /mail"
+      },
+      {
+        "type": "action",
+        "description": "Open the Ask AI panel"
+      },
+      {
+        "type": "action",
+        "description": "Choose a suggested prompt"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an AI response is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC018",
+    "title": "Ask AI accepts a custom question",
+    "description": "This verifies that a user can ask a custom question in Ask AI and receive a streamed response.",
+    "category": "Ask AI Chat",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /mail"
+      },
+      {
+        "type": "action",
+        "description": "Open the Ask AI panel"
+      },
+      {
+        "type": "action",
+        "description": "Type a custom question into the chat input"
+      },
+      {
+        "type": "action",
+        "description": "Submit the question"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an AI response is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC019",
+    "title": "Collapse and expand the sidebar",
+    "description": "This verifies that a user can collapse the mail sidebar and expand it again without leaving the inbox.",
+    "category": "Mail Inbox Dashboard",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /sign-in"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /mail"
+      },
+      {
+        "type": "action",
+        "description": "Collapse the sidebar"
+      },
+      {
+        "type": "action",
+        "description": "Expand the sidebar"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the sidebar navigation is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC020",
+    "title": "View current subscription plan and usage limits",
+    "description": "An authenticated user can open the billing section and see their current subscription status and usage information.",
+    "category": "Subscription and Billing",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "action",
+        "description": "Open the mail client"
+      },
+      {
+        "type": "action",
+        "description": "Open the billing or plan section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the current subscription status is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify usage limits are displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC021",
+    "title": "Switch between light and dark themes",
+    "description": "An authenticated user can toggle the interface theme and see the appearance change in the mail client.",
+    "category": "Theme Toggle",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_USER}} into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Fill in {{LOGIN_PASSWORD}} into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "action",
+        "description": "Open the mail client"
+      },
+      {
+        "type": "action",
+        "description": "Toggle the theme setting"
+      },
+      {
+        "type": "action",
+        "description": "Toggle the theme setting again"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the interface appearance changes between themes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selected theme persists within the session"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC022",
+    "title": "Ask AI shows the quota notice after repeated use",
+    "description": "This verifies that a user sees the daily limit notice after exceeding the free Ask AI quota.",
+    "category": "Ask AI Chat",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /mail"
+      },
+      {
+        "type": "action",
+        "description": "Open the Ask AI panel"
+      },
+      {
+        "type": "action",
+        "description": "Submit repeated questions until the free quota is exceeded"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a daily limit notice is displayed"
+      }
+    ],
+    "priority": "Low"
+  }
+]

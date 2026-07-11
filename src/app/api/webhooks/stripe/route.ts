@@ -7,7 +7,7 @@ import { db } from "@/server/db";
 export const dynamic = "force-dynamic";
 
 type SubscriptionRecordPayload = {
-    userId: string | null;
+    userId?: string | null;
     subscriptionId: string;
     customerId: string | null;
     productId: string;
@@ -50,23 +50,24 @@ async function upsertSubscriptionRecord({
     priceId,
     currentPeriodEnd,
 }: SubscriptionRecordPayload) {
-    const existing = userId
-        ? await db.stripeSubscription.findFirst({
-              where: {
-                  OR: [{ userId }, { subscriptionId }],
-              },
-          })
-        : await db.stripeSubscription.findUnique({
-              where: { subscriptionId },
-          });
+    const existing = await db.stripeSubscription.findFirst({
+        where: {
+            OR: [
+                { subscriptionId },
+                ...(customerId ? [{ customerId }] : []),
+                ...(userId ? [{ userId }] : []),
+            ],
+        },
+    });
 
     if (existing) {
         return db.stripeSubscription.update({
             where: { id: existing.id },
             data: {
-                userId,
+                // Preserve existing userId when renewals omit it
+                ...(userId !== undefined && userId !== null ? { userId } : {}),
                 subscriptionId,
-                customerId,
+                customerId: customerId ?? existing.customerId,
                 productId,
                 priceId,
                 currentPeriodEnd,
@@ -76,7 +77,7 @@ async function upsertSubscriptionRecord({
 
     return db.stripeSubscription.create({
         data: {
-            userId,
+            userId: userId ?? null,
             subscriptionId,
             customerId,
             productId,
@@ -107,8 +108,6 @@ export async function POST(req: Request) {
         console.error("❌ Webhook Error:", error);
         return new NextResponse("webhook error", { status: 400 });
     }
-
-    console.log(`🔔 Webhook received: ${event.type}`);
 
     if (event.type === "checkout.session.completed") {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -157,7 +156,7 @@ export async function POST(req: Request) {
         const { productId, priceId } = await getPlanDetails(subscription);
 
         await upsertSubscriptionRecord({
-            userId: null,
+            userId: undefined,
             subscriptionId: subscription.id,
             customerId:
                 typeof subscription.customer === "string"

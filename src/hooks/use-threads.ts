@@ -1,38 +1,42 @@
-import { useState } from "react";
+import { useMailNavigation } from "./use-mail-navigation";
 import { api } from "@/trpc/react";
-import { useLocalStorage } from "usehooks-ts";
 import { useAccountSelection } from "./use-account-selection";
 
 export const useThreads = () => {
-  const { accounts, accountId, setAccountId, loading: accountsLoading } = useAccountSelection();
-  const account = accounts.find((acc) => String(acc.id) === String(accountId)) ?? null;
-  const [tab, setTab] = useLocalStorage<string>("normalhuman-tab", "inbox");
-  const [done] = useLocalStorage<boolean>("done", false);
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
+  const { accounts, accountId, setAccountId, loading: accountsLoading } =
+    useAccountSelection();
+  const account =
+    accounts.find((acc) => String(acc.id) === String(accountId)) ?? null;
+  const { view, done, setView, setInboxFilter, inboxFilter } =
+    useMailNavigation();
 
-  const { data: threads, isLoading: threadsLoading, refetch } = api.account.getThreads.useQuery(
-    {
-      accountId,
-      tab: tab || "inbox",
-      done: done ?? false,
-    },
-    {
-      enabled: !!accountId,
-    }
-  );
+  const { data: threads, isLoading: threadsLoading, refetch } =
+    api.account.getThreads.useQuery(
+      {
+        accountId,
+        view: view ?? "inbox",
+        done: done ?? false,
+      },
+      {
+        enabled: !!accountId,
+      },
+    );
 
   const isLoading = accountsLoading || threadsLoading;
 
   return {
-    threads: threads || [],
+    threads: threads ?? [],
     accounts,
     account,
     accountId,
     setAccountId,
-    tab,
-    setTab,
-    selectedThreadId,
-    setSelectedThreadId,
+    view,
+    inboxFilter,
+    done,
+    setView,
+    setInboxFilter,
+    tab: view,
+    setTab: setView,
     loading: isLoading,
     isLoading,
     refetch,

@@ -2,18 +2,17 @@
 
 import React from 'react'
 import { Button } from './ui/button'
-import { getAurinkoAuthUrl } from '../lib/aurinko'
+
 const LinkAccountButton = () => {
   return (
-    <Button onClick={async () => {
-      const authUrl = await getAurinkoAuthUrl('Google')
-      console.log('🔗 Generated Aurinko URL:', authUrl)
-
-      if (authUrl) {
-        window.location.href = authUrl
-      }
-    }}>
-      Link Account
+    <Button
+      size="lg"
+      className="w-full"
+      onClick={() => {
+        // API route builds IMAP authorize URL without OAuth scopes
+        window.location.href = '/api/aurinko/auth?serviceType=Google'      }}
+    >
+      Connect Email Account
     </Button>
   )
 }
