@@ -16,14 +16,14 @@ import { SideBar } from "./components/sidebar"
 import { useThreads } from "@/hooks/use-threads"
 import { useThread } from "@/hooks/use-thread"
 import { ThreadDisplay } from "./components/thread-display"
-import SearchBar, { isSearchingAtom, searchResultsAtom } from "./components/search/SearchBar"
+import SearchBar, { isSearchPendingAtom, searchResultsAtom, searchValueAtom } from "./components/search/SearchBar"
 import { useAtom } from "jotai"
 import { PanelHeader } from "@/components/mail/panel-header"
 import { InboxDoneToggle } from "@/components/mail/inbox-done-toggle"
 import { ThreadListItem } from "@/components/mail/thread-list-item"
 import { EmptyState } from "@/components/mail/empty-state"
 import { ThreadListSkeleton } from "@/components/mail/loading-skeleton"
-import type { OramaEmailDocument, OramaSearchHit } from "@/types"
+import type { OramaSearchHit } from "@/types"
 import { toast } from "sonner"
 import { useAutoSync } from "@/hooks/use-auto-sync"
 
@@ -60,8 +60,9 @@ const formatDate = (date: string | Date) =>
 function ThreadListPanel({
   headerTitle,
   view,
-  isSearching,
+  hasSearchQuery,
   searchResults,
+  isSearchPending,
   isLoading,
   isSyncing,
   threads,
@@ -71,8 +72,9 @@ function ThreadListPanel({
 }: {
   headerTitle: string
   view: string
-  isSearching: boolean
+  hasSearchQuery: boolean
   searchResults: { hits?: OramaSearchHit[] } | null
+  isSearchPending: boolean
   isLoading: boolean
   isSyncing: boolean
   threads: ReturnType<typeof useThreads>["threads"]
@@ -97,8 +99,10 @@ function ThreadListPanel({
         role="listbox"
         aria-label="Thread list"
       >
-        {isSearching ? (
-          searchResults?.hits?.length ? (
+        {hasSearchQuery ? (
+          isSearchPending || !searchResults ? (
+            <ThreadListSkeleton />
+          ) : searchResults.hits?.length ? (
             <div className="space-y-2">
               <p className="px-1 pb-1 text-caption font-medium text-muted-foreground">
                 Found {searchResults.hits.length} results
@@ -176,8 +180,9 @@ export function MailShell({
 }: MailProps) {
   const { threads, view, isLoading, account, accountId } = useThreads()
   const [threadId, setThreadId] = useThread()
-  const [isSearching] = useAtom(isSearchingAtom)
   const [searchResults] = useAtom(searchResultsAtom)
+  const [searchValue] = useAtom(searchValueAtom)
+  const [isSearchPending] = useAtom(isSearchPendingAtom)
   const isMobile = useMediaQuery("(max-width: 768px)")
 
   useAutoSync(accountId)
@@ -245,12 +250,14 @@ export function MailShell({
   if (!isMounted) return null
 
   const isSyncing = account?.syncStatus === "syncing"
+  const hasSearchQuery = searchValue.trim().length > 0
 
   const threadListProps = {
     headerTitle,
     view,
-    isSearching,
+    hasSearchQuery,
     searchResults,
+    isSearchPending,
     isLoading,
     isSyncing,
     threads,
@@ -260,7 +267,7 @@ export function MailShell({
   }
 
   if (isMobile) {
-    const showDetail = Boolean(threadId && selectedThread)
+    const showDetail = Boolean(threadId)
 
     return (
       <TooltipProvider delayDuration={0}>
@@ -309,7 +316,7 @@ export function MailShell({
                 </p>
               </div>
               <div className="min-h-0 flex-1">
-                <ThreadDisplay threadId={selectedThread!.id} />
+                <ThreadDisplay threadId={threadId} />
               </div>
             </div>
           )}
@@ -364,8 +371,8 @@ export function MailShell({
             minSize="30%"
             className="bg-preview"
           >
-            {threadId && selectedThread ? (
-              <ThreadDisplay threadId={selectedThread.id} />
+            {threadId ? (
+              <ThreadDisplay threadId={threadId} />
             ) : (
               <EmptyState
                 icon={Mail}

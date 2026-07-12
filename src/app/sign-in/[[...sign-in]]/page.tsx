@@ -31,11 +31,11 @@ export default function Page() {
             appearance={{
               variables: {
                 colorPrimary: "oklch(0.52 0.14 252)",
-                colorText: "oklch(0.21 0.012 260)",
-                colorTextSecondary: "oklch(0.52 0.012 260)",
+                colorForeground: "oklch(0.21 0.012 260)",
+                colorMutedForeground: "oklch(0.52 0.012 260)",
                 colorBackground: "transparent",
-                colorInputBackground: "oklch(0.995 0.002 250)",
-                colorInputText: "oklch(0.21 0.012 260)",
+                colorInput: "oklch(0.995 0.002 250)",
+                colorInputForeground: "oklch(0.21 0.012 260)",
                 borderRadius: "0.625rem",
                 fontFamily: "var(--font-figtree-sans), ui-sans-serif, system-ui, sans-serif",
               },

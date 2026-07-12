@@ -12,11 +12,13 @@ import type { OramaSearchResult } from '@/types'
 export const isSearchingAtom = atom(false)
 export const searchValueAtom = atom('')
 export const searchResultsAtom = atom<OramaSearchResult | null>(null)
+export const isSearchPendingAtom = atom(false)
 
 const SearchBar = () => {
     const [searchValue, setSearchValue] = useAtom(searchValueAtom)
     const [isSearching, setIsSearching] = useAtom(isSearchingAtom)
     const [, setSearchResults] = useAtom(searchResultsAtom)
+    const [, setIsSearchPending] = useAtom(isSearchPendingAtom)
     
     const { accountId } = useAccountSelection()
     const [debouncedSearchValue] = useDebounceValue(searchValue, 500)
@@ -25,18 +27,23 @@ const SearchBar = () => {
     const searchMutation = api.search.search.useMutation({
         onSuccess: (data) => {
             setSearchResults(data as OramaSearchResult)
+            setIsSearchPending(false)
         },
         onError: (err) => {
             console.error("Search error:", err)
+            setSearchResults({ hits: [] })
+            setIsSearchPending(false)
         }
     })
 
     React.useEffect(() => {
         if (!debouncedSearchValue.trim() || !accountId) {
             setSearchResults(null)
+            setIsSearchPending(false)
             return
         }
 
+        setIsSearchPending(true)
         searchMutation.mutate({
             accountId,
             query: debouncedSearchValue,
@@ -90,6 +97,7 @@ const SearchBar = () => {
                         onClick={() => {
                             setSearchValue('')
                             setSearchResults(null)
+                            setIsSearchPending(false)
                             setIsSearching(false)
                             ref.current?.blur()
                         }}
