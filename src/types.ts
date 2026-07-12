@@ -39,8 +39,8 @@ export interface SyncUpdatedResponse {
 }
 
 export const emailAddressSchema = z.object({
-    name: z.string().optional(),
-    address: z.string(),
+    name: z.string().max(320).optional(),
+    address: z.string().email().max(320),
 });
 
 export interface EmailAddress {

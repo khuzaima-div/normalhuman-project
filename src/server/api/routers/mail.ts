@@ -5,7 +5,7 @@ import { emailAddressSchema, type EmailMessage } from "@/types"
 import Account, { mapAurinkoError } from "@/lib/account"
 import { syncEmailsToDatabase } from "@/lib/sync-to-db"
 import { recoverStaleSyncStatus, syncAccountNow } from "@/lib/run-initial-sync"
-import { authoriseAccountAccess } from "./account"
+import { authoriseAccountAccess, getAccountAccessToken } from "./account"
 import { rateLimit } from "@/lib/rate-limit"
 
 function toBodySnippet(body: string): string {
@@ -92,43 +92,39 @@ export const mailRouter = createTRPCRouter({
         .input(z.object({
             accountId: z.string(),
             threadId: z.string().optional(),
-            body: z.string(),
-            subject: z.string(),
+            body: z.string().min(1).max(500_000),
+            subject: z.string().min(1).max(998),
             from: emailAddressSchema,
-            to: z.array(emailAddressSchema),
-            cc: z.array(emailAddressSchema).optional(),
-            bcc: z.array(emailAddressSchema).optional(),
+            to: z.array(emailAddressSchema).min(1).max(50),
+            cc: z.array(emailAddressSchema).max(50).optional(),
+            bcc: z.array(emailAddressSchema).max(50).optional(),
             replyTo: emailAddressSchema.optional(),
-            inReplyTo: z.string().optional(),
-            references: z.string().optional(),
+            inReplyTo: z.string().max(998).optional(),
+            references: z.string().max(4_000).optional(),
         }))
         .mutation(async ({ ctx, input }) => {
-            const account = await ctx.db.account.findFirst({
-                where: {
-                    id: input.accountId,
-                    userId: ctx.auth.userId,
-                },
-            })
+            const account = await authoriseAccountAccess(
+                input.accountId,
+                ctx.auth.userId,
+                ctx.db,
+            )
 
-            if (!account) {
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "Account not found",
-                })
-            }
+            const accessToken = await getAccountAccessToken(
+                input.accountId,
+                ctx.auth.userId,
+                ctx.db,
+            )
 
             const from = {
-                ...input.from,
-                name: input.from.name ?? "",
+                address: account.emailAddress,
+                name: account.name ?? "",
             }
             const to = input.to.map((address) => ({ ...address, name: address.name ?? "" }))
             const cc = input.cc?.map((address) => ({ ...address, name: address.name ?? "" }))
             const bcc = input.bcc?.map((address) => ({ ...address, name: address.name ?? "" }))
-            const replyTo = input.replyTo
-                ? { ...input.replyTo, name: input.replyTo.name ?? "" }
-                : undefined
+            const replyTo = from
 
-            const accountInstance = new Account(account.accessToken)
+            const accountInstance = new Account(accessToken)
             const response = (await accountInstance.sendEmail({
                 from,
                 subject: input.subject,
