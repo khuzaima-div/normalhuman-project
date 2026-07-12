@@ -7,6 +7,7 @@ import { runInitialSync } from "@/lib/run-initial-sync"
 import { db } from "@/server/db" 
 import { waitUntil } from "@vercel/functions"
 import { assertAccountAllowed, BillingLimitError } from "@/lib/billing"
+import { OAUTH_STATE_COOKIE, verifyOAuthState } from "@/lib/oauth-state"
 
 export const GET = async (req: NextRequest) => {
     try {
@@ -20,6 +21,16 @@ export const GET = async (req: NextRequest) => {
         const params = req.nextUrl.searchParams
         const status = params.get('status')
         const code = params.get('code')
+        const state = params.get('state')
+
+        if (!state || !verifyOAuthState(state, userId)) {
+            return NextResponse.json({ message: "Invalid OAuth state" }, { status: 403 })
+        }
+
+        const cookieState = req.cookies.get(OAUTH_STATE_COOKIE)?.value
+        if (cookieState && cookieState !== state) {
+            return NextResponse.json({ message: "Invalid OAuth state" }, { status: 403 })
+        }
 
         if (status !== 'success') {
             return NextResponse.json({ message: "Failed to link account" }, { status: 400 })
@@ -69,7 +80,15 @@ export const GET = async (req: NextRequest) => {
         const accountId = token.accountId.toString()
         const existingAccount = await db.account.findUnique({
             where: { id: accountId },
+            select: { userId: true },
         })
+
+        if (existingAccount && existingAccount.userId !== userId) {
+            return NextResponse.json(
+                { message: "This email account is already linked to another user" },
+                { status: 409 },
+            )
+        }
 
         if (!existingAccount) {
             try {
@@ -120,7 +139,9 @@ export const GET = async (req: NextRequest) => {
         }
 
         // User ko cleanly dashboard ya mail page par bhej dein, and pass the newly linked account ID
-        return NextResponse.redirect(new URL(`/mail?accountId=${accountId}`, req.nextUrl.origin));
+        const redirectResponse = NextResponse.redirect(new URL(`/mail?accountId=${accountId}`, req.nextUrl.origin));
+        redirectResponse.cookies.delete(OAUTH_STATE_COOKIE);
+        return redirectResponse;
 
     } catch (error) {
         console.error("Error in Aurinko Callback:", error)

@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server"
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
 import { getAurinkoCallbackUrl } from "@/lib/aurinko"
+import { createOAuthState, OAUTH_STATE_COOKIE } from "@/lib/oauth-state"
 
 /**
  * Starts Aurinko account linking.
@@ -21,12 +22,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ message: "AURINKO_CLIENT_ID is not configured" }, { status: 500 })
   }
 
+  const state = createOAuthState(userId)
+
   const params = new URLSearchParams({
     clientId,
     serviceType,
     responseType: "code",
     returnUrl,
-    state: userId,
+    state,
   })
 
   if (serviceType === "IMAP") {
@@ -36,5 +39,15 @@ export async function GET(req: NextRequest) {
   }
 
   const authorizeUrl = `https://api.aurinko.io/v1/auth/authorize?${params.toString()}`
-  return NextResponse.redirect(authorizeUrl)
+  const response = NextResponse.redirect(authorizeUrl)
+
+  response.cookies.set(OAUTH_STATE_COOKIE, state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 600,
+    path: "/",
+  })
+
+  return response
 }
