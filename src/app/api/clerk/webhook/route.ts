@@ -56,7 +56,7 @@ export const POST = async (req: Request) => {
     });
 
     return new Response("Webhook received", { status: 200 });
-  } catch (error) {
+  } catch {
     // Idempotent: user may already exist from Aurinko callback fallback
     try {
       await db.user.update({

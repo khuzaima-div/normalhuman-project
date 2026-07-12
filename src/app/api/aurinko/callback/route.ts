@@ -1,6 +1,7 @@
 // src/app/api/aurinko/callback/route.ts
 import { auth, currentUser } from "@clerk/nextjs/server"
-import { NextRequest, NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
+import { NextResponse } from "next/server"
 import { exchangeCodeForAccessToken, getAccountDetails } from "@/lib/aurinko"
 import { runInitialSync } from "@/lib/run-initial-sync"
 import { db } from "@/server/db" 

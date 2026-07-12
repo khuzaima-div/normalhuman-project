@@ -12,7 +12,7 @@ export const POST = async (req: NextRequest) => {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
+    const body = (await req.json()) as { accountId?: string };
     const { accountId } = body;
 
     if (!accountId) {
