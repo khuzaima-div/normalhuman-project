@@ -52,6 +52,83 @@ export async function assertChatAllowed(userId: string): Promise<void> {
   }
 }
 
+/**
+ * Atomically reserve one chat/AI credit before starting a paid API call.
+ * Prevents concurrent requests from exceeding the daily free limit.
+ */
+export async function reserveChatCredit(userId: string): Promise<void> {
+  if (await isProUser(userId)) {
+    return;
+  }
+
+  const day = getTodayStr();
+
+  await db.$transaction(async (tx) => {
+    const record = await tx.chatbotInteraction.findUnique({
+      where: {
+        userId_day: {
+          userId,
+          day,
+        },
+      },
+    });
+
+    const usage = record?.count ?? 0;
+    if (usage >= FREE_CREDITS_PER_DAY) {
+      throw new BillingLimitError("Limit reached");
+    }
+
+    await tx.chatbotInteraction.upsert({
+      where: {
+        userId_day: {
+          userId,
+          day,
+        },
+      },
+      create: {
+        userId,
+        day,
+        count: 1,
+      },
+      update: {
+        count: {
+          increment: 1,
+        },
+      },
+    });
+  });
+}
+
+/**
+ * Release a reserved credit when an AI request fails before delivering value.
+ */
+export async function releaseChatCredit(userId: string): Promise<void> {
+  if (await isProUser(userId)) {
+    return;
+  }
+
+  const day = getTodayStr();
+
+  try {
+    await db.chatbotInteraction.updateMany({
+      where: {
+        userId,
+        day,
+        count: {
+          gt: 0,
+        },
+      },
+      data: {
+        count: {
+          decrement: 1,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Failed to release chat credit:", error);
+  }
+}
+
 export async function getAccountLimit(userId: string): Promise<number> {
   return (await isProUser(userId))
     ? PRO_ACCOUNTS_PER_USER

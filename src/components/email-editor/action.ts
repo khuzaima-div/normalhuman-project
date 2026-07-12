@@ -1,17 +1,60 @@
 'use server';
 
+import { auth } from '@clerk/nextjs/server';
 import { streamText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { createStreamableValue } from 'ai/rsc';
+import { BillingLimitError, releaseChatCredit, reserveChatCredit } from '@/lib/billing';
+import { rateLimit } from '@/lib/rate-limit';
+
+const MAX_CONTEXT_LENGTH = 50_000;
+const MAX_PROMPT_LENGTH = 2_000;
+const MAX_CURRENT_TEXT_LENGTH = 10_000;
+const MAX_SUBJECT_LENGTH = 500;
+const MAX_RECIPIENT_LENGTH = 320;
+
+async function assertAiComposeAllowed(): Promise<string> {
+    const { userId } = await auth();
+    if (!userId) {
+        throw new Error('Unauthorized');
+    }
+
+    const rateLimitResult = rateLimit(`ai-compose:${userId}`, {
+        windowMs: 60_000,
+        maxRequests: 30,
+    });
+    if (!rateLimitResult.success) {
+        throw new Error('Too many requests');
+    }
+
+    await reserveChatCredit(userId);
+    return userId;
+}
 
 // 1. FULL EMAIL RE-WRITE ENGINE (Using system blocks + Markdown context parsing)
 export async function generateEmail(context: string, prompt: string) {
+    let userId: string;
+    try {
+        userId = await assertAiComposeAllowed();
+    } catch (error) {
+        if (error instanceof BillingLimitError) {
+            throw new Error('Limit reached');
+        }
+        throw error;
+    }
+
+    if (context.length > MAX_CONTEXT_LENGTH || prompt.length > MAX_PROMPT_LENGTH) {
+        await releaseChatCredit(userId);
+        throw new Error('Input too large');
+    }
+
     const stream = createStreamableValue('');
 
-    (async () => {
-        const { textStream } = await streamText({
-            model: openai('gpt-4-turbo') as Parameters<typeof streamText>[0]['model'],
-            prompt: `
+    void (async () => {
+        try {
+            const { textStream } = await streamText({
+                model: openai('gpt-4-turbo') as Parameters<typeof streamText>[0]['model'],
+                prompt: `
 You are an AI email assistant embedded in an email client app. Your purpose is to help the user compose or reply to emails perfectly.
 
 THE TIME NOW IS ${new Date().toLocaleString()}
@@ -30,13 +73,18 @@ When responding, follow these rules strictly:
 4. Do not output the Subject line, just the email body content.
 5. Format the output beautifully using clean HTML paragraphs (<p>...</p>) and bold tags (<strong>...</strong>) where appropriate to ensure excellent line spacing and readability. Do NOT wrap your entire response inside markdown code blocks (like \`\`\`html).
 `,
-        });
+            });
 
-        for await (const delta of textStream) {
-            stream.update(delta);
+            for await (const delta of textStream) {
+                stream.update(delta);
+            }
+
+            stream.done();
+        } catch (error) {
+            await releaseChatCredit(userId);
+            console.error('generateEmail failed:', error);
+            stream.done();
         }
-
-        stream.done();
     })();
 
     return { output: stream.value };
@@ -44,12 +92,32 @@ When responding, follow these rules strictly:
 
 // 2. INLINE AUTOCOMPLETE ENGINE (Ctrl + J)
 export async function generate(currentText: string, subject: string, recipient: string) {
+    let userId: string;
+    try {
+        userId = await assertAiComposeAllowed();
+    } catch (error) {
+        if (error instanceof BillingLimitError) {
+            throw new Error('Limit reached');
+        }
+        throw error;
+    }
+
+    if (
+        currentText.length > MAX_CURRENT_TEXT_LENGTH ||
+        subject.length > MAX_SUBJECT_LENGTH ||
+        recipient.length > MAX_RECIPIENT_LENGTH
+    ) {
+        await releaseChatCredit(userId);
+        throw new Error('Input too large');
+    }
+
     const stream = createStreamableValue('');
 
-    (async () => {
-        const { textStream } = await streamText({
-            model: openai('gpt-4-turbo') as Parameters<typeof streamText>[0]['model'],
-            prompt: `
+    void (async () => {
+        try {
+            const { textStream } = await streamText({
+                model: openai('gpt-4-turbo') as Parameters<typeof streamText>[0]['model'],
+                prompt: `
 You are an AI email assistant that helps users write, continue, and improve email content.
 
 SUBJECT: ${subject}
@@ -60,13 +128,18 @@ ${currentText}
 
 Continue the email naturally, preserving the existing draft style and tone. Do not include any explanations, labels, or formatting instructions in the output.
 `,
-        });
+            });
 
-        for await (const delta of textStream) {
-            stream.update(delta);
+            for await (const delta of textStream) {
+                stream.update(delta);
+            }
+
+            stream.done();
+        } catch (error) {
+            await releaseChatCredit(userId);
+            console.error('generate failed:', error);
+            stream.done();
         }
-
-        stream.done();
     })();
 
     return { output: stream.value };

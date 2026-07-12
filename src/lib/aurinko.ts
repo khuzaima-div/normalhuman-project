@@ -1,7 +1,42 @@
-"use server"
-
 import axios from 'axios'
+import { createHmac, timingSafeEqual } from 'crypto'
 import { auth } from "@clerk/nextjs/server";
+import { env } from "@/env";
+
+export function getAurinkoCallbackUrl(): string {
+  return `${env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")}/api/aurinko/callback`;
+}
+
+/**
+ * Verify Aurinko webhook HMAC signature.
+ * Base string format: v0:{timestamp}:{raw_body}
+ */
+export function verifyAurinkoWebhookSignature(
+  rawBody: string,
+  timestamp: string | null,
+  signature: string | null,
+  signingSecret: string,
+): boolean {
+  if (!timestamp || !signature) {
+    return false;
+  }
+
+  const baseString = `v0:${timestamp}:${rawBody}`;
+  const expected = createHmac("sha256", signingSecret)
+    .update(baseString)
+    .digest("hex");
+
+  try {
+    const sigBuf = Buffer.from(signature, "utf8");
+    const expBuf = Buffer.from(expected, "utf8");
+    if (sigBuf.length !== expBuf.length) {
+      return false;
+    }
+    return timingSafeEqual(sigBuf, expBuf);
+  } catch {
+    return false;
+  }
+}
 
 /**
  * 1. Generate Aurinko Authorization URL
@@ -13,7 +48,7 @@ export const getAurinkoAuthUrl = async (serviceType: 'Google' | 'Office365' | 'I
   if (!userId) throw new Error("Unauthorized");
 
   const clientId = process.env.AURINKO_CLIENT_ID as string;
-  const returnUrl = "http://localhost:3000/api/aurinko/callback";
+  const returnUrl = getAurinkoCallbackUrl();
 
   const params = new URLSearchParams({
     clientId,

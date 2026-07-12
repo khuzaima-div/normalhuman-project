@@ -6,31 +6,61 @@ import { buildEmailRagContext } from "@/lib/rag-context";
 import { db } from "@/server/db";
 import { auth } from "@clerk/nextjs/server";
 import { authoriseAccountAccess } from "@/server/api/routers/account";
-import { assertChatAllowed, BillingLimitError } from "@/lib/billing";
+import { BillingLimitError, releaseChatCredit, reserveChatCredit } from "@/lib/billing";
+import { rateLimit } from "@/lib/rate-limit";
+import { chatRequestSchema } from "@/lib/schemas/chat";
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
 
 export async function POST(req: Request) {
+    let userId: string | null = null;
+    let creditReserved = false;
+
     try {
-        const { userId } = await auth();
+        const authResult = await auth();
+        userId = authResult.userId;
         if (!userId) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { messages, accountId } = await req.json();
-        
-        if (!messages || messages.length === 0) {
-            return NextResponse.json({ error: "No messages provided" }, { status: 400 });
+        const rateLimitResult = rateLimit(`chat:${userId}`, {
+            windowMs: 60_000,
+            maxRequests: 20,
+        });
+        if (!rateLimitResult.success) {
+            return NextResponse.json(
+                { error: "Too many requests" },
+                {
+                    status: 429,
+                    headers: {
+                        "Retry-After": String(Math.ceil(rateLimitResult.retryAfterMs / 1000)),
+                    },
+                },
+            );
         }
 
-        if (!accountId) {
-            return NextResponse.json({ error: "No account selected" }, { status: 400 });
+        let rawBody: unknown;
+        try {
+            rawBody = await req.json();
+        } catch {
+            return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
         }
+
+        const parsed = chatRequestSchema.safeParse(rawBody);
+        if (!parsed.success) {
+            return NextResponse.json(
+                { error: "Invalid request", details: parsed.error.flatten() },
+                { status: 400 },
+            );
+        }
+
+        const { messages, accountId } = parsed.data;
 
         try {
-            await assertChatAllowed(userId);
+            await reserveChatCredit(userId);
+            creditReserved = true;
         } catch (error) {
             if (error instanceof BillingLimitError) {
                 return NextResponse.json({ error: error.message }, { status: 403 });
@@ -40,7 +70,7 @@ export async function POST(req: Request) {
 
         await authoriseAccountAccess(accountId, userId, db);
 
-        const lastMessage = messages[messages.length - 1];
+        const lastMessage = messages[messages.length - 1]!;
 
         const oramaManager = new OramaManager(accountId);
         await oramaManager.initialize();
@@ -67,46 +97,30 @@ export async function POST(req: Request) {
             - Keep your responses concise and markdown-formatted.`
         };
 
+        const userMessages = messages
+            .filter((message) => message.role === "user" || !message.role)
+            .map((message) => ({
+                role: "user" as const,
+                content: message.content,
+            }));
+
         const response = await openai.chat.completions.create({
             model: "gpt-4o-mini",
             messages: [
                 systemPrompt,
-                ...messages.filter((message: { role: string }) => message.role === "user"),
+                ...userMessages,
             ],
             stream: true,
         });
 
-        const stream = OpenAIStream(response as Parameters<typeof OpenAIStream>[0], {
-            onCompletion: async () => {
-                const todayStr = new Date().toDateString();
-                try {
-                    await db.chatbotInteraction.upsert({
-                        where: {
-                            userId_day: {
-                                userId,
-                                day: todayStr,
-                            },
-                        },
-                        create: {
-                            userId,
-                            day: todayStr,
-                            count: 1,
-                        },
-                        update: {
-                            count: {
-                                increment: 1,
-                            },
-                        },
-                    });
-                } catch (error) {
-                    console.error("Error updating chatbot interaction:", error);
-                }
-            },
-        });
+        const stream = OpenAIStream(response as Parameters<typeof OpenAIStream>[0]);
 
         return new StreamingTextResponse(stream);
 
     } catch (error) {
+        if (creditReserved && userId) {
+            await releaseChatCredit(userId);
+        }
         console.error("Error in AI Chat Route:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }

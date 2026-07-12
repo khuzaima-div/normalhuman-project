@@ -6,6 +6,7 @@ import Account, { mapAurinkoError } from "@/lib/account"
 import { syncEmailsToDatabase } from "@/lib/sync-to-db"
 import { recoverStaleSyncStatus, syncAccountNow } from "@/lib/run-initial-sync"
 import { authoriseAccountAccess } from "./account"
+import { rateLimit } from "@/lib/rate-limit"
 
 function toBodySnippet(body: string): string {
     return body
@@ -40,6 +41,17 @@ export const mailRouter = createTRPCRouter({
             accountId: z.string(),
         }))
         .mutation(async ({ ctx, input }) => {
+            const rateLimitResult = rateLimit(`sync:${ctx.auth.userId}`, {
+                windowMs: 60_000,
+                maxRequests: 10,
+            });
+            if (!rateLimitResult.success) {
+                throw new TRPCError({
+                    code: "TOO_MANY_REQUESTS",
+                    message: "Sync rate limit exceeded. Please try again shortly.",
+                });
+            }
+
             await authoriseAccountAccess(input.accountId, ctx.auth.userId, ctx.db)
             await recoverStaleSyncStatus(input.accountId)
 

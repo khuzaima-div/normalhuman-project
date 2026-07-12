@@ -1,5 +1,7 @@
 import { auth } from "@clerk/nextjs/server"
-import { NextRequest, NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
+import { NextResponse } from "next/server"
+import { getAurinkoCallbackUrl } from "@/lib/aurinko"
 
 /**
  * Starts Aurinko account linking.
@@ -13,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   const serviceType = (req.nextUrl.searchParams.get("serviceType") ?? "IMAP").trim()
   const clientId = process.env.AURINKO_CLIENT_ID
-  const returnUrl = "http://localhost:3000/api/aurinko/callback"
+  const returnUrl = getAurinkoCallbackUrl()
 
   if (!clientId) {
     return NextResponse.json({ message: "AURINKO_CLIENT_ID is not configured" }, { status: 500 })

@@ -4,30 +4,59 @@ import type { AppPrismaClient } from "@/server/db"
 import { TRPCError } from "@trpc/server"
 import { recoverStaleSyncStatus } from "@/lib/run-initial-sync"
 
+const publicAccountSelect = {
+    id: true,
+    emailAddress: true,
+    name: true,
+} as const
+
+export type PublicAccount = {
+    id: string
+    emailAddress: string
+    name: string | null
+}
+
 /**
- * Type-safe access validator mapping Prisma client interface structures explicitly
+ * Validates ownership and returns safe account metadata only (no credentials).
  */
 export const authoriseAccountAccess = async (
     accountId: string,
     userId: string,
     db: AppPrismaClient
-) => {
+): Promise<PublicAccount> => {
     const account = await db.account.findFirst({
         where: {
             id: accountId,
             userId: userId,
         },
-        select: {
-            id: true,
-            emailAddress: true,
-            name: true,
-            accessToken: true,
-        }
+        select: publicAccountSelect,
     })
     if (!account) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Account not found" })
     }
     return account
+}
+
+/**
+ * Server-only: fetch Aurinko access token after ownership validation.
+ */
+export const getAccountAccessToken = async (
+    accountId: string,
+    userId: string,
+    db: AppPrismaClient
+): Promise<string> => {
+    await authoriseAccountAccess(accountId, userId, db)
+
+    const tokenRow = await db.account.findFirst({
+        where: { id: accountId, userId },
+        select: { accessToken: true },
+    })
+
+    if (!tokenRow?.accessToken) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Account not found" })
+    }
+
+    return tokenRow.accessToken
 }
 
 export const accountRouter = createTRPCRouter({
