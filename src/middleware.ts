@@ -6,7 +6,6 @@ const isPublicRoute = createRouteMatcher([
   // Public for Aurinko provider callbacks; authenticity verified via HMAC in the route handler.
   '/api/aurinko/webhook',
   '/api/webhooks/stripe',
-  '/api/trpc(.*)',
 ])
 
 export default clerkMiddleware(async (auth, req) => {

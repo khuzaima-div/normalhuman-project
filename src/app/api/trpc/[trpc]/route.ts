@@ -16,15 +16,11 @@ const handler = async (req: NextRequest) => {
     req,
     router: appRouter,
     createContext: () => createContext(req),
-    // Handles custom serialization/deserialization crashes over dynamic batches safely
-    onError:
-      process.env.NODE_ENV === "development"
-        ? ({ path, error }) => {
-            console.error(
-              `❌ tRPC failed on ${path ?? "<no-path>"}: ${error.message}`
-            );
-          }
-        : undefined,
+    onError: ({ path, error }) => {
+      console.error(
+        `tRPC failed on ${path ?? "<no-path>"}: ${error.message}`,
+      );
+    },
   });
 };
 
