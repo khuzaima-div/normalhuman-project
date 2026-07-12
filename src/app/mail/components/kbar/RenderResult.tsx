@@ -144,7 +144,7 @@ export default function RenderResults() {
             items={results}
             onRender={({ item, active }) =>
                 typeof item === "string" ? (
-                    <div className="px-5 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                    <div className="px-4 pt-3 pb-1 text-label font-medium uppercase tracking-wider text-muted-foreground">
                         {item}
                     </div>
                 ) : (

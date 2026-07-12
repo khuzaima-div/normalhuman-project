@@ -61,7 +61,6 @@ const ComposeButton = () => {
             onSuccess: async () => {
                 toast.success("Email sent successfully")
                 await utils.account.getThreads.invalidate()
-                // Reset states after successful tracking
                 setToValues([])
                 setCcValues([])
                 setSubject('')
@@ -77,41 +76,32 @@ const ComposeButton = () => {
     return (
         <Drawer open={open} onOpenChange={setOpen}>
             <DrawerTrigger asChild>
-                {/* 🎨 Compact Button Layout - Premium Dark Mode Styling */}
-                <Button 
-                    className="gap-2 bg-zinc-900 text-zinc-50 hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200/90 shadow-sm transition-all duration-200 font-medium px-4 h-10 rounded-xl"
-                >
-                    <Pencil className='size-4' />
-                    <span>Compose</span>
+                <Button size="sm" className="h-9 gap-1.5 rounded-lg px-3 font-medium shadow-token-xs">
+                    <Pencil className="size-3.5" />
+                    <span className="hidden sm:inline">Compose</span>
                 </Button>
             </DrawerTrigger>
             
-            {/* 🌌 Fixed Drawer Content Layer Container with responsive tracking limits */}
-            <DrawerContent className="bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 max-h-[85vh]">
-                <div className="mx-auto w-full max-w-4xl p-4 overflow-y-auto">
+            <DrawerContent className="max-h-[85vh] border-border bg-background">
+                <div className="mx-auto w-full max-w-4xl overflow-y-auto p-4 sm:p-6">
                     <DrawerHeader className="px-0 pt-0 pb-4">
-                        <DrawerTitle className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                        <DrawerTitle className="text-title font-semibold tracking-tight">
                             Compose Email
                         </DrawerTitle>
                     </DrawerHeader>
                     
-                    {/* Inject updated Props directly corresponding with your recent Editor types */}
                     <EmailEditor
                         toValues={toValues}
                         setToValues={setToValues}
                         ccValues={ccValues}
                         setCcValues={setCcValues}
-
                         onToChange={setToValues}
                         onCcChange={setCcValues}
-
                         subject={subject}
                         setSubject={setSubject}
-
                         to={toValues.map(to => to.value)}
                         handleSend={handleSend}
                         isSending={sendEmail.isPending}
-
                         defaultToolbarExpanded={true}
                         fromName={account?.name ?? undefined}
                     />

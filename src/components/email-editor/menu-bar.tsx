@@ -18,13 +18,22 @@ import {
     Strikethrough,
     Undo,
 } from "lucide-react";
+import { cn } from '@/lib/utils';
+
+const toolbarButtonClass = (active: boolean) =>
+    cn(
+        "rounded-md p-1.5 transition-colors duration-150",
+        active
+            ? "bg-muted text-foreground"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+    );
 
 const TipTapMenuBar = ({ editor }: { editor: Editor }) => {
     if (!editor) return null;
 
     return (
         <div
-            className="flex flex-wrap gap-1.5 p-1 bg-zinc-50 dark:bg-zinc-900 rounded-md border border-zinc-200 dark:border-zinc-800"
+            className="flex flex-wrap gap-0.5 rounded-lg border border-border bg-muted/40 p-1"
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
         >
@@ -35,9 +44,9 @@ const TipTapMenuBar = ({ editor }: { editor: Editor }) => {
                     editor.chain().focus().toggleBold().run()
                 }}
                 disabled={!editor.can().chain().focus().toggleBold().run()}
-                className={`p-1.5 rounded transition ${editor.isActive("bold") ? "bg-zinc-200 dark:bg-zinc-800" : "hover:bg-zinc-100 dark:hover:bg-zinc-800/50"}`}
+                className={toolbarButtonClass(editor.isActive("bold"))}
             >
-                <Bold className="size-4 text-zinc-700 dark:text-zinc-300" />
+                <Bold className="size-4" />
             </button>
             <button
                 type="button"
@@ -46,9 +55,9 @@ const TipTapMenuBar = ({ editor }: { editor: Editor }) => {
                     editor.chain().focus().toggleItalic().run()
                 }}
                 disabled={!editor.can().chain().focus().toggleItalic().run()}
-                className={`p-1.5 rounded transition ${editor.isActive("italic") ? "bg-zinc-200 dark:bg-zinc-800" : "hover:bg-zinc-100 dark:hover:bg-zinc-800/50"}`}
+                className={toolbarButtonClass(editor.isActive("italic"))}
             >
-                <Italic className="size-4 text-zinc-700 dark:text-zinc-300" />
+                <Italic className="size-4" />
             </button>
             <button
                 type="button"
@@ -57,9 +66,9 @@ const TipTapMenuBar = ({ editor }: { editor: Editor }) => {
                     editor.chain().focus().toggleStrike().run()
                 }}
                 disabled={!editor.can().chain().focus().toggleStrike().run()}
-                className={`p-1.5 rounded transition ${editor.isActive("strike") ? "bg-zinc-200 dark:bg-zinc-800" : "hover:bg-zinc-100 dark:hover:bg-zinc-800/50"}`}
+                className={toolbarButtonClass(editor.isActive("strike"))}
             >
-                <Strikethrough className="size-4 text-zinc-700 dark:text-zinc-300" />
+                <Strikethrough className="size-4" />
             </button>
             <button
                 type="button"
@@ -68,9 +77,9 @@ const TipTapMenuBar = ({ editor }: { editor: Editor }) => {
                     editor.chain().focus().toggleCode().run()
                 }}
                 disabled={!editor.can().chain().focus().toggleCode().run()}
-                className={`p-1.5 rounded transition ${editor.isActive("code") ? "bg-zinc-200 dark:bg-zinc-800" : "hover:bg-zinc-100 dark:hover:bg-zinc-800/50"}`}
+                className={toolbarButtonClass(editor.isActive("code"))}
             >
-                <Code className="size-4 text-zinc-700 dark:text-zinc-300" />
+                <Code className="size-4" />
             </button>
             
             <button
@@ -79,9 +88,9 @@ const TipTapMenuBar = ({ editor }: { editor: Editor }) => {
                     e.stopPropagation()
                     editor.chain().focus().toggleHeading({ level: 1 }).run()
                 }}
-                className={`p-1.5 rounded transition ${editor.isActive("heading", { level: 1 }) ? "bg-zinc-200 dark:bg-zinc-800" : "hover:bg-zinc-100 dark:hover:bg-zinc-800/50"}`}
+                className={toolbarButtonClass(editor.isActive("heading", { level: 1 }))}
             >
-                <Heading1 className="size-4 text-zinc-700 dark:text-zinc-300" />
+                <Heading1 className="size-4" />
             </button>
             <button
                 type="button"
@@ -89,9 +98,9 @@ const TipTapMenuBar = ({ editor }: { editor: Editor }) => {
                     e.stopPropagation()
                     editor.chain().focus().toggleHeading({ level: 2 }).run()
                 }}
-                className={`p-1.5 rounded transition ${editor.isActive("heading", { level: 2 }) ? "bg-zinc-200 dark:bg-zinc-800" : "hover:bg-zinc-100 dark:hover:bg-zinc-800/50"}`}
+                className={toolbarButtonClass(editor.isActive("heading", { level: 2 }))}
             >
-                <Heading2 className="size-4 text-zinc-700 dark:text-zinc-300" />
+                <Heading2 className="size-4" />
             </button>
             <button
                 type="button"
@@ -99,9 +108,9 @@ const TipTapMenuBar = ({ editor }: { editor: Editor }) => {
                     e.stopPropagation()
                     editor.chain().focus().toggleHeading({ level: 3 }).run()
                 }}
-                className={`p-1.5 rounded transition ${editor.isActive("heading", { level: 3 }) ? "bg-zinc-200 dark:bg-zinc-800" : "hover:bg-zinc-100 dark:hover:bg-zinc-800/50"}`}
+                className={toolbarButtonClass(editor.isActive("heading", { level: 3 }))}
             >
-                <Heading3 className="size-4 text-zinc-700 dark:text-zinc-300" />
+                <Heading3 className="size-4" />
             </button>
             <button
                 type="button"
@@ -109,9 +118,9 @@ const TipTapMenuBar = ({ editor }: { editor: Editor }) => {
                     e.stopPropagation()
                     editor.chain().focus().toggleHeading({ level: 4 }).run()
                 }}
-                className={`p-1.5 rounded transition ${editor.isActive("heading", { level: 4 }) ? "bg-zinc-200 dark:bg-zinc-800" : "hover:bg-zinc-100 dark:hover:bg-zinc-800/50"}`}
+                className={toolbarButtonClass(editor.isActive("heading", { level: 4 }))}
             >
-                <Heading4 className="size-4 text-zinc-700 dark:text-zinc-300" />
+                <Heading4 className="size-4" />
             </button>
             <button
                 type="button"
@@ -119,9 +128,9 @@ const TipTapMenuBar = ({ editor }: { editor: Editor }) => {
                     e.stopPropagation()
                     editor.chain().focus().toggleHeading({ level: 5 }).run()
                 }}
-                className={`p-1.5 rounded transition ${editor.isActive("heading", { level: 5 }) ? "bg-zinc-200 dark:bg-zinc-800" : "hover:bg-zinc-100 dark:hover:bg-zinc-800/50"}`}
+                className={toolbarButtonClass(editor.isActive("heading", { level: 5 }))}
             >
-                <Heading5 className="size-4 text-zinc-700 dark:text-zinc-300" />
+                <Heading5 className="size-4" />
             </button>
             <button
                 type="button"
@@ -129,9 +138,9 @@ const TipTapMenuBar = ({ editor }: { editor: Editor }) => {
                     e.stopPropagation()
                     editor.chain().focus().toggleHeading({ level: 6 }).run()
                 }}
-                className={`p-1.5 rounded transition ${editor.isActive("heading", { level: 6 }) ? "bg-zinc-200 dark:bg-zinc-800" : "hover:bg-zinc-100 dark:hover:bg-zinc-800/50"}`}
+                className={toolbarButtonClass(editor.isActive("heading", { level: 6 }))}
             >
-                <Heading6 className="size-4 text-zinc-700 dark:text-zinc-300" />
+                <Heading6 className="size-4" />
             </button>
 
             <button
@@ -140,9 +149,9 @@ const TipTapMenuBar = ({ editor }: { editor: Editor }) => {
                     e.stopPropagation()
                     editor.chain().focus().toggleBulletList().run()
                 }}
-                className={`p-1.5 rounded transition ${editor.isActive("bulletList") ? "bg-zinc-200 dark:bg-zinc-800" : "hover:bg-zinc-100 dark:hover:bg-zinc-800/50"}`}
+                className={toolbarButtonClass(editor.isActive("bulletList"))}
             >
-                <List className="size-4 text-zinc-700 dark:text-zinc-300" />
+                <List className="size-4" />
             </button>
             <button
                 type="button"
@@ -150,9 +159,9 @@ const TipTapMenuBar = ({ editor }: { editor: Editor }) => {
                     e.stopPropagation()
                     editor.chain().focus().toggleOrderedList().run()
                 }}
-                className={`p-1.5 rounded transition ${editor.isActive("orderedList") ? "bg-zinc-200 dark:bg-zinc-800" : "hover:bg-zinc-100 dark:hover:bg-zinc-800/50"}`}
+                className={toolbarButtonClass(editor.isActive("orderedList"))}
             >
-                <ListOrdered className="size-4 text-zinc-700 dark:text-zinc-300" />
+                <ListOrdered className="size-4" />
             </button>
             <button
                 type="button"
@@ -160,9 +169,9 @@ const TipTapMenuBar = ({ editor }: { editor: Editor }) => {
                     e.stopPropagation()
                     editor.chain().focus().toggleBlockquote().run()
                 }}
-                className={`p-1.5 rounded transition ${editor.isActive("blockquote") ? "bg-zinc-200 dark:bg-zinc-800" : "hover:bg-zinc-100 dark:hover:bg-zinc-800/50"}`}
+                className={toolbarButtonClass(editor.isActive("blockquote"))}
             >
-                <Quote className="size-4 text-zinc-700 dark:text-zinc-300" />
+                <Quote className="size-4" />
             </button>
             <button
                 type="button"
@@ -171,9 +180,9 @@ const TipTapMenuBar = ({ editor }: { editor: Editor }) => {
                     editor.chain().focus().undo().run()
                 }}
                 disabled={!editor.can().chain().focus().undo().run()}
-                className="p-1.5 rounded transition hover:bg-zinc-100 dark:hover:bg-zinc-800/50 disabled:opacity-40"
+                className={cn(toolbarButtonClass(false), "disabled:opacity-40")}
             >
-                <Undo className="size-4 text-zinc-700 dark:text-zinc-300" />
+                <Undo className="size-4" />
             </button>
             <button
                 type="button"
@@ -182,9 +191,9 @@ const TipTapMenuBar = ({ editor }: { editor: Editor }) => {
                     editor.chain().focus().redo().run()
                 }}
                 disabled={!editor.can().chain().focus().redo().run()}
-                className="p-1.5 rounded transition hover:bg-zinc-100 dark:hover:bg-zinc-800/50 disabled:opacity-40"
+                className={cn(toolbarButtonClass(false), "disabled:opacity-40")}
             >
-                <Redo className="size-4 text-zinc-700 dark:text-zinc-300" />
+                <Redo className="size-4" />
             </button>
         </div>
     );

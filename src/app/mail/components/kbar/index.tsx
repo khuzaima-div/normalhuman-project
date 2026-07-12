@@ -80,15 +80,15 @@ const ActualComponent = ({ children }: { children: React.ReactNode }) => {
     return (
         <>
             <KBarPortal>
-                <KBarPositioner className="fixed inset-0 z-50 flex items-start justify-center bg-background/40 p-4 backdrop-blur-sm sm:p-6">
-                    <KBarAnimator className="relative mt-[10vh] w-full max-w-lg overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl">
+                <KBarPositioner className="fixed inset-0 z-50 flex items-start justify-center bg-background/50 p-4 backdrop-blur-sm sm:p-6">
+                    <KBarAnimator className="relative mt-[10vh] w-full max-w-lg overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-token-lg">
                         <div className="border-b border-border">
                             <KBarSearch 
                                 defaultPlaceholder="Type a command or search…"
-                                className="w-full border-none bg-transparent px-5 py-3.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:outline-none focus:ring-0" 
+                                className="w-full border-none bg-transparent px-5 py-4 text-body text-foreground outline-none placeholder:text-muted-foreground focus:outline-none focus:ring-0" 
                             />
                         </div>
-                        <div className="max-h-80 overflow-y-auto pb-2">
+                        <div className="max-h-80 overflow-y-auto pb-2 scrollbar-elegant">
                             <RenderResults />
                         </div>
                     </KBarAnimator>

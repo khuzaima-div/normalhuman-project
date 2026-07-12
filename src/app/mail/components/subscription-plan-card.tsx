@@ -30,8 +30,8 @@ function PlanButton({
       type="submit"
       disabled={disabled || pending}
       className={cn(
-        "w-full rounded-full px-3 py-1.5 text-caption font-semibold",
-        "bg-primary text-primary-foreground",
+        "w-full rounded-lg px-3 py-2 text-caption font-semibold",
+        "bg-primary text-primary-foreground shadow-token-xs",
         "transition-[background-color,opacity,transform] duration-200 ease-out",
         "hover:bg-primary/90 active:scale-[0.98]",
         "disabled:cursor-not-allowed disabled:opacity-60",
@@ -48,10 +48,7 @@ function PlanButton({
 
 const cardSurfaceClass = cn(
   "relative flex w-full min-w-0 items-stretch overflow-hidden rounded-xl p-3",
-  "border border-primary/10 bg-gradient-to-br from-primary/5 via-sidebar-surface to-primary/10",
-  "text-sidebar-foreground shadow-sm",
-  "dark:border-sidebar-border dark:from-sidebar-surface dark:via-sidebar dark:to-primary/10",
-  "dark:shadow-none",
+  "border border-sidebar-border bg-sidebar-surface text-sidebar-foreground shadow-token-xs",
 )
 
 export function SubscriptionPlanCard({ isCollapsed }: SubscriptionPlanCardProps) {
@@ -122,7 +119,7 @@ export function SubscriptionPlanCard({ isCollapsed }: SubscriptionPlanCardProps)
           </div>
 
           {!isPro && (
-            <div className="h-1 w-full overflow-hidden rounded-full bg-primary/10 dark:bg-white/10">
+            <div className="h-1 w-full overflow-hidden rounded-full bg-primary/10">
               <div
                 className={cn(
                   "h-full rounded-full transition-[width] duration-500 ease-out",
@@ -150,7 +147,7 @@ export function SubscriptionPlanCard({ isCollapsed }: SubscriptionPlanCardProps)
             alt=""
             width={96}
             height={96}
-            className="h-14 w-auto max-w-[4.5rem] object-contain object-bottom opacity-80 dark:opacity-90 sm:h-16 sm:max-w-[5rem] md:h-20 md:max-w-[6rem]"
+            className="h-14 w-auto max-w-[4.5rem] object-contain object-bottom opacity-70 sm:h-16 sm:max-w-[5rem] md:h-20 md:max-w-[6rem]"
             priority={false}
           />
         </div>

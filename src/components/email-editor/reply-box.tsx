@@ -27,9 +27,9 @@ const ReplyBox = () => {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center rounded-2xl border border-zinc-200/60 bg-white p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)] dark:border-zinc-800/60 dark:bg-zinc-900">
-                <div className="flex items-center gap-3 text-sm text-zinc-500 dark:text-zinc-400">
-                    <span className="inline-block size-4 animate-spin rounded-full border-2 border-zinc-300 border-t-transparent dark:border-zinc-600" />
+            <div className="flex items-center justify-center rounded-xl border border-border bg-card p-8 shadow-token-sm">
+                <div className="flex items-center gap-3 text-body text-muted-foreground">
+                    <span className="inline-block size-4 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-primary" />
                     <span>Loading the reply editor…</span>
                 </div>
             </div>

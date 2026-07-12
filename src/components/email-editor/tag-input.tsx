@@ -31,7 +31,7 @@ const TagInput: React.FC<TagInputProps> = ({ suggestions, defaultValues = [], la
     const options: TagOption[] = suggestions.map(suggestion => ({
         rawLabel: suggestion,
         label: (
-            <span className='flex items-center gap-2 text-zinc-900 dark:text-zinc-100'>
+            <span className='flex items-center gap-2 text-foreground'>
                 <Avatar name={suggestion} size='25' textSizeRatio={2} round={true} />
                 {suggestion}
             </span>
@@ -43,8 +43,8 @@ const TagInput: React.FC<TagInputProps> = ({ suggestions, defaultValues = [], la
     const externalDefaultValue = defaultValues?.map((item) => ({ rawLabel: item.label, label: item.label, value: item.value }))
 
     return (
-        <div className="border border-zinc-200 dark:border-zinc-800 rounded-md flex items-center bg-transparent dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
-            <span className='ml-3 text-sm text-zinc-500 dark:text-zinc-400 font-medium select-none'>{label}</span>
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-background text-foreground">
+            <span className='ml-3 text-caption text-muted-foreground font-medium select-none'>{label}</span>
             <Select<TagOption, true, GroupBase<TagOption>>
                 value={externalValue}
                 onChange={(selected: OnChangeValue<TagOption, true>) => onChange(selected.map(option => ({ label: option.rawLabel, value: option.value })))}
@@ -56,7 +56,7 @@ const TagInput: React.FC<TagInputProps> = ({ suggestions, defaultValues = [], la
                 options={input ? options.concat({
                     rawLabel: input,
                     label: (
-                        <span className='flex items-center gap-2 text-zinc-900 dark:text-zinc-100'>
+                        <span className='flex items-center gap-2 text-foreground'>
                             <Avatar name={input} size='25' textSizeRatio={2} round={true} />
                             {input}
                         </span>
@@ -70,32 +70,32 @@ const TagInput: React.FC<TagInputProps> = ({ suggestions, defaultValues = [], la
                         return 'bg-transparent dark:bg-transparent'
                     },
                     singleValue: () => {
-                        return 'text-zinc-900 dark:text-zinc-100'
+                        return 'text-foreground'
                     },
                     multiValue: () => {
-                        return 'bg-zinc-100 dark:!bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded'
+                        return 'bg-muted border border-border rounded-md'
                     },
                     multiValueLabel: () => {
-                        return 'text-zinc-800 dark:text-zinc-200 rounded-md'
+                        return 'text-foreground rounded-md'
                     },
                     multiValueRemove: () => {
-                        return 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-100'
+                        return 'text-muted-foreground hover:text-foreground'
                     },
                     indicatorsContainer: () => {
-                        return 'bg-transparent dark:bg-transparent'
+                        return 'bg-transparent'
                     },
                     input: () => {
-                        return 'text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 bg-transparent'
+                        return 'text-foreground placeholder:text-muted-foreground bg-transparent'
                     },
                     placeholder: () => {
-                        return 'text-zinc-400 dark:text-zinc-500'
+                        return 'text-muted-foreground'
                     },
                     menu: () => {
-                        return 'bg-white dark:!bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-md rounded-md mt-1'
+                        return 'bg-popover border border-border shadow-token-md rounded-lg mt-1'
                     },
                     option: ({ isFocused }) => {
                         return isFocused 
-                            ? 'bg-zinc-100 dark:bg-zinc-800 p-2 cursor-pointer' 
+                            ? 'bg-accent p-2 cursor-pointer' 
                             : 'bg-transparent p-2 cursor-pointer'
                     }
                 }}

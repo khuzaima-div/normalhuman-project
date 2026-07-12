@@ -65,13 +65,13 @@ const SearchBar = () => {
     }, [searchValue])
 
     return (
-        <div className="shrink-0 px-4 pb-4 pt-1">
+        <div className="shrink-0 px-4 pb-3 pt-0">
             <motion.div className="relative" layoutId="search-bar">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" aria-hidden />
+                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
                 <Input
                     ref={ref}
                     placeholder="Search emails…"
-                    className="h-10 rounded-xl border-zinc-200/50 bg-slate-100/50 pl-9 pr-16 text-sm shadow-none transition-all duration-200 ease-out placeholder:text-zinc-400 focus-visible:border-zinc-300/70 focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-primary/10 dark:border-zinc-800/50 dark:bg-zinc-900/50 dark:placeholder:text-zinc-500 dark:focus-visible:border-zinc-700 dark:focus-visible:bg-zinc-900"
+                    className="h-10 rounded-lg border-border bg-muted/50 pl-9 pr-16 text-body shadow-none transition-[background-color,border-color,box-shadow] duration-200 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:bg-background focus-visible:ring-[3px] focus-visible:ring-ring/30"
                     value={searchValue}
                     onChange={(e) => setSearchValue(e.target.value)}
                     onFocus={() => setIsSearching(true)}
@@ -80,12 +80,12 @@ const SearchBar = () => {
                 />
                 <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
                     {searchMutation.isPending && (
-                      <Loader2 className="size-4 animate-spin text-zinc-400" aria-label="Searching" />
+                      <Loader2 className="size-4 animate-spin text-muted-foreground" aria-label="Searching" />
                     )}
-                    {(searchValue || isSearching) && (
+                    {(searchValue || isSearching) ? (
                       <button
                         type="button"
-                        className="rounded-lg p-1 text-zinc-400 transition-colors duration-200 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                        className="rounded-md p-1.5 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
                         aria-label="Clear search"
                         onClick={() => {
                             setSearchValue('')
@@ -96,6 +96,8 @@ const SearchBar = () => {
                       >
                         <X className="size-4" />
                       </button>
+                    ) : (
+                      <kbd className="kbd-hint hidden sm:inline-flex">/</kbd>
                     )}
                 </div>
             </motion.div>

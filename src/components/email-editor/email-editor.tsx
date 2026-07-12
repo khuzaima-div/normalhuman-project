@@ -218,7 +218,7 @@ export default function EmailEditor({
         },
         editorProps: {
             attributes: {
-                class: 'prose dark:prose-invert focus:outline-none min-h-[5.5rem] text-sm leading-relaxed text-zinc-700 dark:text-zinc-300 w-full max-w-none cursor-text px-1 py-1',
+                class: 'prose dark:prose-invert focus:outline-none min-h-[5.5rem] text-body leading-relaxed text-foreground w-full max-w-none cursor-text px-1 py-1',
             },
         },
     })
@@ -330,9 +330,9 @@ export default function EmailEditor({
 
     return (
 
-        <div className="overflow-hidden rounded-2xl border border-zinc-200/60 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.02)] dark:border-zinc-800/60 dark:bg-zinc-900 dark:shadow-[0_4px_24px_rgba(0,0,0,0.25)]">
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-token-sm">
 
-            <div className="flex items-center justify-between gap-4 border-b border-zinc-100 px-5 py-4 dark:border-zinc-800/60">
+            <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-3 sm:px-5">
 
                 <button
 
@@ -346,17 +346,17 @@ export default function EmailEditor({
 
                     }}
 
-                    className="inline-flex items-center gap-2 rounded-full px-1 py-1 text-xs font-medium tracking-tight text-zinc-500 transition-all duration-200 ease-out hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+                    className="inline-flex items-center gap-2 rounded-lg px-1 py-1 text-caption font-medium tracking-tight text-muted-foreground transition-colors duration-200 ease-out hover:text-foreground"
 
                 >
 
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                    <span className="rounded-md bg-muted px-2.5 py-1 text-foreground">
 
                         Reply
 
                     </span>
 
-                    <span className="max-w-40 truncate text-zinc-500 dark:text-zinc-400">{draftRecipient}</span>
+                    <span className="max-w-40 truncate">{draftRecipient}</span>
 
                     <ChevronDown className={cn("size-3.5 transition-transform duration-200", isExpanded && "rotate-180")} />
 
@@ -384,7 +384,7 @@ export default function EmailEditor({
 
             {isExpanded && (
                 <div
-                    className="shrink-0 space-y-2 border-b border-zinc-100 px-5 py-3 dark:border-zinc-800/60"
+                    className="shrink-0 space-y-2 border-b border-border px-4 py-3 sm:px-5 dark:border-border"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <TagInput
@@ -403,15 +403,15 @@ export default function EmailEditor({
                         onChange={(values) => onCcChange ? onCcChange(values) : setCcValues(values)}
                         placeholder="Add recipients"
                     />
-                    <div className="flex items-center gap-3 rounded-lg bg-slate-50/60 px-2 py-1.5 transition-all duration-200 focus-within:ring-1 focus-within:ring-zinc-200/70 dark:bg-zinc-900/50 dark:focus-within:ring-zinc-800">
-                        <span className="w-12 shrink-0 select-none text-xs font-medium text-zinc-500 dark:text-zinc-500">
+                    <div className="flex items-center gap-3 rounded-lg bg-muted/50 px-2 py-1.5 transition-all duration-200 focus-within:ring-2 focus-within:ring-ring/30">
+                        <span className="w-12 shrink-0 select-none text-caption font-medium text-muted-foreground">
                             Subject
                         </span>
                         <input
                             value={subject}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSubject(e.target.value)}
                             placeholder="Re:"
-                            className="w-full border-none bg-transparent px-0 text-sm font-medium text-zinc-900 outline-none ring-0 placeholder:text-zinc-400 focus:outline-none focus:ring-0 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+                            className="w-full border-none bg-transparent px-0 text-body font-medium text-foreground outline-none ring-0 placeholder:text-muted-foreground focus:outline-none focus:ring-0"
                         />
                     </div>
                 </div>
@@ -419,7 +419,7 @@ export default function EmailEditor({
 
 
 
-            <div className="px-5 py-4">
+            <div className="px-4 py-3 sm:px-5 sm:py-4">
 
                 <EditorContent
 
@@ -437,17 +437,17 @@ export default function EmailEditor({
 
             <div
 
-                className="flex items-center justify-between gap-4 border-t border-zinc-100 px-5 py-4 dark:border-zinc-800/60"
+                className="flex flex-col gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4"
 
                 onClick={(e) => e.stopPropagation()}
 
             >
 
-                <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                <span className="text-caption text-muted-foreground">
 
                     Tip: Press{' '}
 
-                    <kbd className="rounded-md border border-zinc-200/70 bg-slate-50 px-1.5 py-0.5 font-mono text-[10px] font-medium text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                    <kbd className="kbd-hint">
 
                         Ctrl + J
 
@@ -471,7 +471,7 @@ export default function EmailEditor({
 
                     }}
 
-                    className="h-9 rounded-xl bg-zinc-900 px-5 text-sm font-semibold tracking-tight text-white shadow-sm transition-all duration-200 ease-out hover:bg-zinc-800 active:scale-[0.98] dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200"
+                    className="h-9 w-full rounded-lg px-5 text-body font-semibold sm:w-auto"
 
                 >
 

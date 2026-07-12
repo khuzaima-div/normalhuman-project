@@ -26,10 +26,10 @@ function NavCountBadge({
   return (
     <span
       className={cn(
-        "ml-auto inline-flex min-w-[1.375rem] shrink-0 items-center justify-center rounded-full px-2 py-0.5 font-mono text-caption tabular-nums",
+        "ml-auto inline-flex min-w-[1.375rem] shrink-0 items-center justify-center rounded-md px-1.5 py-0.5 font-mono text-caption tabular-nums",
         isActive
-          ? "bg-white/75 text-zinc-800 dark:bg-white/10 dark:text-zinc-200"
-          : "bg-zinc-100/80 text-sidebar-muted dark:bg-white/5 dark:text-zinc-500",
+          ? "bg-primary/10 text-primary"
+          : "bg-muted text-sidebar-muted",
       )}
     >
       {count}
@@ -41,8 +41,8 @@ function navItemClass(isActive: boolean, isCollapsed: boolean) {
   return cn(
     "sidebar-nav-item group/nav-item flex items-center justify-start outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
     isCollapsed
-      ? "size-10 justify-center rounded-xl px-0"
-      : "h-10 w-full rounded-xl px-3 text-body font-medium",
+      ? "size-11 justify-center rounded-lg px-0"
+      : "h-10 w-full rounded-lg px-3 text-body font-medium",
     isActive
       ? "sidebar-nav-item-active font-medium"
       : "border border-transparent text-sidebar-muted",
@@ -56,7 +56,7 @@ export function Nav({ links, isCollapsed, onTabChange }: NavProps) {
       className="group flex min-h-0 w-full flex-col data-[collapsed=true]:items-center"
     >
       {!isCollapsed && (
-        <p className="sidebar-section-label px-2 pb-1.5 pt-1">Mailbox</p>
+        <p className="sidebar-section-label px-2 pb-2 pt-0.5">Mailbox</p>
       )}
 
       <nav
@@ -83,7 +83,7 @@ export function Nav({ links, isCollapsed, onTabChange }: NavProps) {
                   >
                     <Icon
                       className={cn(
-                        "size-4 shrink-0 transition-transform duration-200 ease-out group-hover/nav-item:scale-105",
+                        "size-4 shrink-0 transition-transform duration-200 ease-out",
                         isActive
                           ? "text-sidebar-active-foreground"
                           : "text-sidebar-muted group-hover/nav-item:text-sidebar-foreground",
@@ -116,7 +116,7 @@ export function Nav({ links, isCollapsed, onTabChange }: NavProps) {
             >
               <Icon
                 className={cn(
-                  "mr-2.5 size-4 shrink-0 transition-transform duration-200 ease-out group-hover/nav-item:translate-x-0.5",
+                  "mr-2.5 size-4 shrink-0 transition-transform duration-200 ease-out",
                   isActive
                     ? "text-sidebar-active-foreground"
                     : "text-sidebar-muted group-hover/nav-item:text-sidebar-foreground",

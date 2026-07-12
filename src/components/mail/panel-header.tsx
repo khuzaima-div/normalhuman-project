@@ -14,7 +14,7 @@ export function PanelHeader({ title, children, className }: PanelHeaderProps) {
         className,
       )}
     >
-      <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+      <h1 className="text-title font-semibold tracking-tight text-foreground">
         {title}
       </h1>
       {children && (

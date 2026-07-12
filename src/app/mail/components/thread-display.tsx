@@ -51,11 +51,11 @@ function ActionButton({
           onClick={onClick}
           aria-label={label}
           className={cn(
-            "inline-flex size-9 items-center justify-center rounded-full text-zinc-500",
-            "transition-all duration-200 ease-out",
-            "hover:bg-slate-100 hover:text-zinc-900",
+            "inline-flex size-10 items-center justify-center rounded-lg text-muted-foreground",
+            "transition-[background-color,color] duration-200 ease-out",
+            "hover:bg-muted hover:text-foreground",
             "disabled:pointer-events-none disabled:opacity-40",
-            "dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-100",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
             className,
           )}
         >
@@ -121,9 +121,9 @@ export function ThreadDisplay({
   const isDone = Boolean(fullThread?.done ?? (listThread as { done?: boolean } | undefined)?.done)
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-[#F1F5F9]/40 text-foreground dark:bg-zinc-950/90">
-      <div className="flex shrink-0 items-center justify-between px-5 py-3">
-        <div className="flex items-center gap-1">
+    <div className="flex h-full flex-col overflow-hidden bg-preview text-foreground">
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2 sm:px-5">
+        <div className="flex items-center gap-0.5">
           <ActionButton
             label={isDone ? "Move to Inbox" : "Archive (Done)"}
             disabled={!thread || !accountId || setDone.isPending}
@@ -151,11 +151,11 @@ export function ThreadDisplay({
               disabled={!thread || !accountId || setDone.isPending}
               aria-label="More actions"
               className={cn(
-                "inline-flex size-9 items-center justify-center rounded-full text-zinc-500",
-                "transition-all duration-200 ease-out",
-                "hover:bg-slate-100 hover:text-zinc-900",
+                "inline-flex size-10 items-center justify-center rounded-lg text-muted-foreground",
+                "transition-[background-color,color] duration-200 ease-out",
+                "hover:bg-muted hover:text-foreground",
                 "disabled:pointer-events-none disabled:opacity-40",
-                "dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-100",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
               )}
             >
               <MoreVertical className="size-4" />
@@ -180,35 +180,35 @@ export function ThreadDisplay({
       </div>
 
       {thread ? (
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden px-5 pb-5">
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.02)] dark:bg-zinc-900 dark:shadow-[0_4px_24px_rgba(0,0,0,0.25)]">
-            <div className="shrink-0 border-b border-zinc-100 px-4 py-2.5 dark:border-zinc-800/60">
-              <div className="flex min-w-0 items-start gap-2">
-                <ShadcnAvatar className="size-8 shrink-0 ring-1 ring-zinc-200/70 dark:ring-zinc-700/60">
-                  <AvatarFallback className="bg-slate-100 text-[11px] font-semibold text-zinc-800 dark:bg-zinc-800 dark:text-zinc-100">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden px-3 pb-3 pt-2 sm:px-5 sm:pb-5">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-token-sm">
+            <div className="shrink-0 border-b border-border px-4 py-3">
+              <div className="flex min-w-0 items-start gap-3">
+                <ShadcnAvatar className="size-9 shrink-0 ring-1 ring-border">
+                  <AvatarFallback className="bg-muted text-label font-semibold text-foreground">
                     {primaryEmail?.from?.name?.charAt(0) || "E"}
                   </AvatarFallback>
                 </ShadcnAvatar>
 
                 <div className="min-w-0 flex-1 space-y-0.5">
                   <div className="flex items-baseline justify-between gap-2">
-                    <h1 className="line-clamp-2 min-w-0 flex-1 text-base font-semibold leading-snug tracking-tight text-zinc-900 dark:text-zinc-50">
+                    <h1 className="line-clamp-2 min-w-0 flex-1 text-title font-semibold leading-snug tracking-tight text-foreground">
                       {primaryEmail?.subject || "No Subject"}
                     </h1>
                     {primaryEmail?.sentAt && (
                       <time
                         dateTime={new Date(primaryEmail.sentAt).toISOString()}
-                        className="shrink-0 font-mono text-[10px] leading-none tabular-nums text-zinc-400 dark:text-zinc-500"
+                        className="shrink-0 font-mono text-label tabular-nums text-muted-foreground"
                       >
                         {format(new Date(primaryEmail.sentAt), "MMM d, h:mm a")}
                       </time>
                     )}
                   </div>
-                  <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 text-xs leading-tight text-zinc-500 dark:text-zinc-400">
-                    <span className="truncate font-medium text-zinc-600 dark:text-zinc-300">
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 text-caption text-muted-foreground">
+                    <span className="truncate font-medium text-foreground/80">
                       {primaryEmail?.from?.name || "Unknown Sender"}
                     </span>
-                    <span className="text-zinc-300 dark:text-zinc-600">•</span>
+                    <span className="text-border">•</span>
                     <span className="truncate">
                       {primaryEmail?.from?.address}
                     </span>
@@ -217,8 +217,8 @@ export function ThreadDisplay({
               </div>
             </div>
 
-            <div className="scrollbar-elegant min-h-0 flex-1 overflow-y-auto px-4 py-3">
-              <div className="mx-auto w-full max-w-[720px] space-y-6">
+            <div className="scrollbar-elegant min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4">
+              <div className="mx-auto w-full max-w-[720px] space-y-4">
                 {thread.emails.map((email) => (
                   <EmailDisplay
                     key={email.id}
@@ -254,9 +254,9 @@ export function ThreadDisplay({
           </div>
         </div>
       ) : (
-        <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center text-zinc-500 dark:text-zinc-400">
-          <p className="text-sm font-semibold">No conversation selected</p>
-          <p className="max-w-xs text-xs leading-relaxed">
+        <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center text-muted-foreground">
+          <p className="text-body font-medium">No conversation selected</p>
+          <p className="max-w-xs text-caption leading-relaxed">
             Choose an email thread from the list to view the full message.
           </p>
         </div>

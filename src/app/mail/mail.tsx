@@ -2,9 +2,16 @@
 
 import * as React from "react"
 import { usePanelRef } from "react-resizable-panels"
-import { Mail } from "lucide-react"
+import { ArrowLeft, Mail, Menu } from "lucide-react"
+import { useMediaQuery } from "usehooks-ts"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { Button } from "@/components/ui/button"
+import {
+  Drawer,
+  DrawerContent,
+  DrawerTitle,
+} from "@/components/ui/drawer"
 import { SideBar } from "./components/sidebar"
 import { useThreads } from "@/hooks/use-threads"
 import { useThread } from "@/hooks/use-thread"
@@ -50,6 +57,117 @@ const normalizeSize = (size: number | string | undefined): number | string => {
 const formatDate = (date: string | Date) =>
   new Date(date).toLocaleDateString(undefined, { month: "short", day: "numeric" })
 
+function ThreadListPanel({
+  headerTitle,
+  view,
+  isSearching,
+  searchResults,
+  isLoading,
+  isSyncing,
+  threads,
+  threadId,
+  setThreadId,
+  listRef,
+}: {
+  headerTitle: string
+  view: string
+  isSearching: boolean
+  searchResults: { hits?: OramaSearchHit[] } | null
+  isLoading: boolean
+  isSyncing: boolean
+  threads: ReturnType<typeof useThreads>["threads"]
+  threadId: string | null
+  setThreadId: (id: string | null) => void
+  listRef: React.RefObject<HTMLDivElement | null>
+}) {
+  return (
+    <>
+      <div className="shrink-0 border-b border-border bg-thread-list-header">
+        <PanelHeader title={headerTitle}>
+          <div className="flex items-center gap-2">
+            {view === "inbox" && <InboxDoneToggle />}
+          </div>
+        </PanelHeader>
+        <SearchBar />
+      </div>
+
+      <div
+        ref={listRef}
+        className="scrollbar-elegant flex-1 overflow-y-auto overscroll-contain px-3 py-3 sm:px-4 sm:py-4"
+        role="listbox"
+        aria-label="Thread list"
+      >
+        {isSearching ? (
+          searchResults?.hits?.length ? (
+            <div className="space-y-2">
+              <p className="px-1 pb-1 text-caption font-medium text-muted-foreground">
+                Found {searchResults.hits.length} results
+              </p>
+              {(searchResults.hits as OramaSearchHit[]).map((hit) => {
+                const email = hit.document as OramaEmailDocument
+                return (
+                  <ThreadListItem
+                    key={hit.id}
+                    subject={email.title ?? "No subject"}
+                    senderName={email.from ?? "Unknown sender"}
+                    preview={email.body ?? ""}
+                    date={email.sentAt ? formatDate(email.sentAt) : "—"}
+                    selected={threadId === email.threadId}
+                    onClick={() => setThreadId(email.threadId)}
+                  />
+                )
+              })}
+            </div>
+          ) : (
+            <EmptyState
+              title="No results"
+              description="Try a different search term."
+            />
+          )
+        ) : isLoading ? (
+          <ThreadListSkeleton />
+        ) : isSyncing && threads.length === 0 ? (
+          <EmptyState
+            title="Syncing your inbox"
+            description="Your emails are being imported. This may take a minute."
+          />
+        ) : threads.length > 0 ? (
+          <div className="space-y-2">
+            {threads.map((thread) => {
+              const latestEmail = thread.emails?.at(-1)
+              return (
+                <ThreadListItem
+                  key={thread.id}
+                  subject={thread.subject ?? "No subject"}
+                  senderName={
+                    latestEmail?.from?.name ||
+                    latestEmail?.from?.address ||
+                    "Unknown sender"
+                  }
+                  preview={latestEmail?.bodySnippet ?? ""}
+                  date={
+                    latestEmail?.sentAt
+                      ? formatDate(latestEmail.sentAt)
+                      : "—"
+                  }
+                  selected={threadId === thread.id}
+                  onClick={() => setThreadId(thread.id)}
+                />
+              )
+            })}
+          </div>
+        ) : (
+          <EmptyState
+            icon={Mail}
+            title={`No ${headerTitle.toLowerCase()} yet`}
+            description="New messages will appear here once synced."
+          />
+        )}
+      </div>
+    </>
+  )
+}
+
 export function MailShell({
   defaultLayout,
   defaultCollapsed = false,
@@ -60,12 +178,14 @@ export function MailShell({
   const [threadId, setThreadId] = useThread()
   const [isSearching] = useAtom(isSearchingAtom)
   const [searchResults] = useAtom(searchResultsAtom)
+  const isMobile = useMediaQuery("(max-width: 768px)")
 
   useAutoSync(accountId)
 
   const selectedThread = threads.find((thread) => thread.id === threadId) ?? null
   const [isMounted, setIsMounted] = React.useState(false)
   const [isCollapsed, setIsCollapsed] = React.useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = React.useState(false)
   const sidebarRef = usePanelRef()
   const listRef = React.useRef<HTMLDivElement>(null)
 
@@ -126,9 +246,81 @@ export function MailShell({
 
   const isSyncing = account?.syncStatus === "syncing"
 
+  const threadListProps = {
+    headerTitle,
+    view,
+    isSearching,
+    searchResults,
+    isLoading,
+    isSyncing,
+    threads,
+    threadId,
+    setThreadId,
+    listRef,
+  }
+
+  if (isMobile) {
+    const showDetail = Boolean(threadId && selectedThread)
+
+    return (
+      <TooltipProvider delayDuration={0}>
+        <div className="fixed inset-0 flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
+          <Drawer open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+            <DrawerContent className="max-h-[85vh] border-border bg-sidebar p-0">
+              <DrawerTitle className="sr-only">Navigation</DrawerTitle>
+              <div className="h-[min(80vh,640px)] overflow-hidden">
+                <SideBar isCollapsed={false} onNavigate={() => setMobileNavOpen(false)} />
+              </div>
+            </DrawerContent>
+          </Drawer>
+
+          {!showDetail ? (
+            <div className="flex h-full min-h-0 flex-col bg-thread-list">
+              <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-thread-list-header px-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-11 shrink-0"
+                  onClick={() => setMobileNavOpen(true)}
+                  aria-label="Open navigation"
+                >
+                  <Menu className="size-5" />
+                </Button>
+                <h1 className="text-title font-semibold tracking-tight text-foreground">
+                  {headerTitle}
+                </h1>
+              </div>
+              <ThreadListPanel {...threadListProps} />
+            </div>
+          ) : (
+            <div className="flex h-full min-h-0 flex-col bg-preview">
+              <div className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-surface-1 px-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-11 shrink-0"
+                  onClick={() => setThreadId(null)}
+                  aria-label="Back to thread list"
+                >
+                  <ArrowLeft className="size-5" />
+                </Button>
+                <p className="min-w-0 truncate text-title font-medium text-foreground">
+                  {selectedThread?.subject ?? "Message"}
+                </p>
+              </div>
+              <div className="min-h-0 flex-1">
+                <ThreadDisplay threadId={selectedThread!.id} />
+              </div>
+            </div>
+          )}
+        </div>
+      </TooltipProvider>
+    )
+  }
+
   return (
     <TooltipProvider delayDuration={0}>
-      <div className="fixed inset-0 flex h-screen w-screen items-stretch overflow-hidden bg-background text-foreground transition-colors duration-200">
+      <div className="fixed inset-0 flex h-screen w-screen items-stretch overflow-hidden bg-background text-foreground">
         <ResizablePanelGroup
           direction="horizontal"
           defaultLayout={layout}
@@ -147,102 +339,21 @@ export function MailShell({
             minSize="15%"
             maxSize="25%"
             onResize={() => setIsCollapsed(sidebarRef.current?.isCollapsed() ?? false)}
-            className="flex h-full flex-col overflow-hidden border-r border-border/60 bg-sidebar"
+            className="flex h-full flex-col overflow-hidden border-r border-border bg-sidebar"
           >
             <SideBar isCollapsed={isCollapsed} />
           </ResizablePanel>
 
-          <ResizableHandle withHandle className="w-px bg-zinc-200/40 transition-colors hover:bg-zinc-300/50 dark:bg-zinc-800/40 dark:hover:bg-zinc-700/50" />
+          <ResizableHandle withHandle className="w-px bg-border transition-colors hover:bg-border/80" />
 
           <ResizablePanel
             id="threads"
             defaultSize={normalizeSize(layout.threads)}
             minSize="25%"
             maxSize="40%"
-            className="flex h-full flex-col overflow-hidden border-r border-zinc-200/40 bg-[#F1F5F9]/60 dark:border-zinc-800/40 dark:bg-zinc-950/90"
+            className="flex h-full flex-col overflow-hidden border-r border-border bg-thread-list"
           >
-            <div className="shrink-0 border-b border-zinc-200/50 bg-white dark:border-zinc-800/50 dark:bg-zinc-950">
-              <PanelHeader title={headerTitle}>
-                <div className="flex items-center gap-2">
-                  {view === "inbox" && <InboxDoneToggle />}
-                </div>
-              </PanelHeader>
-              <SearchBar />
-            </div>
-
-            <div
-              ref={listRef}
-              className="scrollbar-elegant flex-1 overflow-y-auto overscroll-contain px-3 py-4"
-              role="listbox"
-              aria-label="Thread list"
-            >
-              {isSearching ? (
-                searchResults?.hits?.length ? (
-                  <div className="space-y-3">
-                    <p className="px-1 pb-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                      Found {searchResults.hits.length} results
-                    </p>
-                    {(searchResults.hits as OramaSearchHit[]).map((hit) => {
-                      const email = hit.document as OramaEmailDocument
-                      return (
-                        <ThreadListItem
-                          key={hit.id}
-                          subject={email.title ?? "No subject"}
-                          senderName={email.from ?? "Unknown sender"}
-                          preview={email.body ?? ""}
-                          date={email.sentAt ? formatDate(email.sentAt) : "—"}
-                          selected={threadId === email.threadId}
-                          onClick={() => setThreadId(email.threadId)}
-                        />
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <EmptyState
-                    title="No results"
-                    description="Try a different search term."
-                  />
-                )
-              ) : isLoading ? (
-                <ThreadListSkeleton />
-              ) : isSyncing && threads.length === 0 ? (
-                <EmptyState
-                  title="Syncing your inbox"
-                  description="Your emails are being imported. This may take a minute."
-                />
-              ) : threads.length > 0 ? (
-                <div className="space-y-3">
-                  {threads.map((thread) => {
-                    const latestEmail = thread.emails?.at(-1)
-                    return (
-                      <ThreadListItem
-                        key={thread.id}
-                        subject={thread.subject ?? "No subject"}
-                        senderName={
-                          latestEmail?.from?.name ||
-                          latestEmail?.from?.address ||
-                          "Unknown sender"
-                        }
-                        preview={latestEmail?.bodySnippet ?? ""}
-                        date={
-                          latestEmail?.sentAt
-                            ? formatDate(latestEmail.sentAt)
-                            : "—"
-                        }
-                        selected={threadId === thread.id}
-                        onClick={() => setThreadId(thread.id)}
-                      />
-                    )
-                  })}
-                </div>
-              ) : (
-                <EmptyState
-                  icon={Mail}
-                  title={`No ${headerTitle.toLowerCase()} yet`}
-                  description="New messages will appear here once synced."
-                />
-              )}
-            </div>
+            <ThreadListPanel {...threadListProps} />
           </ResizablePanel>
 
           <ResizableHandle className="relative w-0 bg-transparent after:w-2" />
@@ -251,7 +362,7 @@ export function MailShell({
             id="preview"
             defaultSize={normalizeSize(layout.preview)}
             minSize="30%"
-            className="bg-[#F1F5F9]/40 dark:bg-zinc-950/90"
+            className="bg-preview"
           >
             {threadId && selectedThread ? (
               <ThreadDisplay threadId={selectedThread.id} />

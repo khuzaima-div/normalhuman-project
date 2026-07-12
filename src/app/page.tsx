@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import LinkAccountButton from "@/components/link-account-button";
+import { BrandMark } from "@/components/brand-mark";
 import { db } from "@/server/db";
 import { Mail, Sparkles } from "lucide-react";
 
@@ -21,26 +22,26 @@ export default async function Home() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-6">
-      <div className="w-full max-w-md space-y-8 text-center">
-        <div className="space-y-3">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Mail className="h-6 w-6" />
+    <div className="brand-mesh relative flex min-h-screen flex-col items-center justify-center px-6 py-16">
+      <div className="w-full max-w-md space-y-10 text-center">
+        <div className="flex flex-col items-center space-y-4">
+          <BrandMark size="lg" showWordmark={false} />
+          <div className="space-y-2">
+            <h1 className="text-display font-semibold tracking-tight text-foreground">
+              Normal Human
+            </h1>
+            <p className="mx-auto max-w-xs text-body leading-relaxed text-muted-foreground">
+              A calm, AI-powered email client. Connect your inbox to get started.
+            </p>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Normal Human
-          </h1>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            A calm, AI-powered email client. Connect your inbox to get started.
-          </p>
         </div>
 
-        <ul className="space-y-3 text-left text-sm text-muted-foreground">
-          <li className="flex items-start gap-3 rounded-lg border border-border/60 bg-card p-3">
+        <ul className="space-y-2 text-left">
+          <li className="flex items-start gap-3 px-1 py-2 text-body text-muted-foreground">
             <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             <span>Ask AI questions about your emails with full context</span>
           </li>
-          <li className="flex items-start gap-3 rounded-lg border border-border/60 bg-card p-3">
+          <li className="flex items-start gap-3 px-1 py-2 text-body text-muted-foreground">
             <Mail className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             <span>Search, compose, and manage threads in one place</span>
           </li>

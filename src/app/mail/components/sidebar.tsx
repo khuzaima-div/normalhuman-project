@@ -13,9 +13,11 @@ import { SubscriptionPlanCard } from "./subscription-plan-card"
 import { AccountSwitcher } from "./account-switcher"
 import ThemeToggle from "@/components/theme-toggle"
 import ComposeButton from "@/components/email-editor/compose-button"
+import { BrandMark } from "@/components/brand-mark"
 
 interface SidebarProps {
   isCollapsed: boolean
+  onNavigate?: () => void
 }
 
 function SidebarRoot({
@@ -64,8 +66,8 @@ function SidebarContent({
   return (
     <div
       className={cn(
-        "scrollbar-none min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2 pb-10",
-        isCollapsed && "px-1.5 pb-8",
+        "scrollbar-none min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-3",
+        isCollapsed && "px-1.5",
       )}
     >
       {children}
@@ -83,8 +85,8 @@ function SidebarFooter({
   return (
     <footer
       className={cn(
-        "flex w-full min-w-0 shrink-0 flex-col gap-2 border-t border-sidebar-border px-3 pb-3 pt-8",
-        isCollapsed && "px-2 pt-6",
+        "flex w-full min-w-0 shrink-0 flex-col gap-3 border-t border-sidebar-border px-3 pb-3 pt-4",
+        isCollapsed && "px-2 pt-3",
       )}
     >
       {children}
@@ -92,7 +94,7 @@ function SidebarFooter({
   )
 }
 
-export function SideBar({ isCollapsed }: SidebarProps) {
+export function SideBar({ isCollapsed, onNavigate }: SidebarProps) {
   const { accountId } = useAccountSelection()
   const { view, setView } = useMailNavigation()
 
@@ -109,16 +111,26 @@ export function SideBar({ isCollapsed }: SidebarProps) {
     { enabled: !!accountId },
   )
 
+  const handleTabChange = (id: string) => {
+    setView(id as MailView)
+    onNavigate?.()
+  }
+
   return (
     <SidebarRoot isCollapsed={isCollapsed}>
       <SidebarHeader isCollapsed={isCollapsed}>
+        {!isCollapsed ? (
+          <div className="mb-3">
+            <BrandMark size="sm" />
+          </div>
+        ) : null}
         <AccountSwitcher isCollapsed={isCollapsed} />
       </SidebarHeader>
 
       <SidebarContent isCollapsed={isCollapsed}>
         <Nav
           isCollapsed={isCollapsed}
-          onTabChange={(id) => setView(id as MailView)}
+          onTabChange={handleTabChange}
           links={[
             {
               title: "Inbox",
@@ -153,8 +165,14 @@ export function SideBar({ isCollapsed }: SidebarProps) {
         </div>
 
         <div className="flex items-center justify-between gap-2 border-t border-sidebar-border pt-3">
-          <UserButton />
-          <div className="flex items-center gap-2">
+          <UserButton
+            appearance={{
+              elements: {
+                avatarBox: "h-9 w-9",
+              },
+            }}
+          />
+          <div className="flex items-center gap-1">
             <ThemeToggle />
             <ComposeButton />
           </div>
