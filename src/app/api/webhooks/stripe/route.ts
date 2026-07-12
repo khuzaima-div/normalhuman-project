@@ -103,7 +103,7 @@ export async function POST(req: Request) {
         event = stripe.webhooks.constructEvent(
             body,
             signature,
-            process.env.STRIPE_WEBHOOK_SECRET as string,
+            process.env.STRIPE_WEBHOOK_SECRET!,
         );
     } catch (error: unknown) {
         console.error("❌ Webhook Error:", error);
@@ -111,7 +111,7 @@ export async function POST(req: Request) {
     }
 
     if (event.type === "checkout.session.completed") {
-        const session = event.data.object as Stripe.Checkout.Session;
+        const session = event.data.object;
         const userId = getUserIdFromSession(session);
 
         if (!userId) {
@@ -172,7 +172,7 @@ export async function POST(req: Request) {
     }
 
     if (event.type === "customer.subscription.updated") {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object;
         const isActive = subscription.status === "active" || subscription.status === "trialing";
 
         if (!isActive) {
@@ -195,7 +195,7 @@ export async function POST(req: Request) {
     }
 
     if (event.type === "customer.subscription.deleted") {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object;
 
         await db.stripeSubscription.deleteMany({
             where: { subscriptionId: subscription.id },

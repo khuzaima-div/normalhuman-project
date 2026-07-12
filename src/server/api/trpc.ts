@@ -84,7 +84,7 @@ export const publicProcedure = t.procedure.use(timingMiddleware);
  * This custom middleware blocks unauthenticated requests and provides type-safe ctx.auth
  */
 const isAuthed = t.middleware(({ next, ctx }) => {
-  if (!ctx.auth || !ctx.auth.userId) {
+  if (!ctx.auth?.userId) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "You must be logged in to access this resource.",

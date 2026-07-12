@@ -209,12 +209,12 @@ export default function EmailEditor({
         extensions: [StarterKit, CustomText],
         onCreate: ({ editor: createdEditor }) => {
             setValue(safeGetEditorHTML(createdEditor))
-            setEditorHeight(Math.max(88, (createdEditor.view.dom as HTMLElement).scrollHeight))
+            setEditorHeight(Math.max(88, (createdEditor.view.dom).scrollHeight))
             if (onEditorInitialize) onEditorInitialize(createdEditor)
         },
         onUpdate: ({ editor: updatedEditor }) => {
             setValue(safeGetEditorHTML(updatedEditor))
-            setEditorHeight(Math.max(88, (updatedEditor.view.dom as HTMLElement).scrollHeight))
+            setEditorHeight(Math.max(88, (updatedEditor.view.dom).scrollHeight))
         },
         editorProps: {
             attributes: {

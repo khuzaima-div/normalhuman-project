@@ -103,8 +103,8 @@ function ThreadListPanel({
               <p className="px-1 pb-1 text-caption font-medium text-muted-foreground">
                 Found {searchResults.hits.length} results
               </p>
-              {(searchResults.hits as OramaSearchHit[]).map((hit) => {
-                const email = hit.document as OramaEmailDocument
+              {(searchResults.hits).map((hit) => {
+                const email = hit.document
                 return (
                   <ThreadListItem
                     key={hit.id}
@@ -189,7 +189,7 @@ export function MailShell({
   const sidebarRef = usePanelRef()
   const listRef = React.useRef<HTMLDivElement>(null)
 
-  const headerTitle = VIEW_TITLES[view as keyof typeof VIEW_TITLES] ?? "Inbox"
+  const headerTitle = VIEW_TITLES[view] ?? "Inbox"
 
   React.useEffect(() => setIsMounted(true), [])
 

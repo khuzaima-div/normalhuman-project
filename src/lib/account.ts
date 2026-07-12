@@ -180,7 +180,7 @@ class Account {
     }
 
     async getUpdatedEmails({ deltaToken, pageToken }: { deltaToken?: string, pageToken?: string }): Promise<SyncUpdatedResponse> {
-        let params: Record<string, string> = {};
+        const params: Record<string, string> = {};
         if (deltaToken) {
             params.deltaToken = deltaToken;
         }

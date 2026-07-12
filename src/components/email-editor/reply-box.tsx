@@ -12,18 +12,12 @@ const ReplyBox = () => {
     const [threadId] = useThread()
     const { accountId } = useThreads()
 
-    const { data: replyDetails, isLoading, error } = api.account.getReplyDetails.useQuery({
+    const { data: replyDetails, isLoading } = api.account.getReplyDetails.useQuery({
         accountId: accountId ?? '',
         threadId: threadId ?? '',
     }, {
         enabled: !!threadId && !!accountId,
     })
-
-    React.useEffect(() => {
-        if (error) {
-            console.error("DEBUG: api.account.getReplyDetails error", error)
-        }
-    }, [error])
 
     if (isLoading) {
         return (
@@ -42,10 +36,6 @@ const ReplyBox = () => {
         cc: [],
         from: { name: '', address: '' },
         id: '',
-    }
-
-    if (!replyDetails) {
-        console.warn('DEBUG: getReplyDetails returned no data, rendering fallback editor', { threadId, accountId, error })
     }
 
     return <Component replyDetails={replyDetails ?? fallbackReplyDetails} />

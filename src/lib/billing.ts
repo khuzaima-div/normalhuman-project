@@ -41,17 +41,6 @@ export async function getDailyChatUsage(userId: string): Promise<number> {
   return record?.count ?? 0;
 }
 
-export async function assertChatAllowed(userId: string): Promise<void> {
-  if (await isProUser(userId)) {
-    return;
-  }
-
-  const usage = await getDailyChatUsage(userId);
-  if (usage >= FREE_CREDITS_PER_DAY) {
-    throw new BillingLimitError("Limit reached");
-  }
-}
-
 /**
  * Atomically reserve one chat/AI credit before starting a paid API call.
  * Prevents concurrent requests from exceeding the daily free limit.
