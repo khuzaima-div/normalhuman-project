@@ -10,7 +10,7 @@ export const searchRouter = createTRPCRouter({
     .input(
       z.object({
         accountId: z.string(),
-        query: z.string(),
+        query: z.string().max(500),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -18,14 +18,7 @@ export const searchRouter = createTRPCRouter({
         return { hits: [] };
       }
 
-      try {
-        await authoriseAccountAccess(input.accountId, ctx.auth.userId, ctx.db);
-      } catch {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You do not have access to this account.",
-        });
-      }
+      await authoriseAccountAccess(input.accountId, ctx.auth.userId, ctx.db);
 
       try {
         const oramaManager = new OramaManager(input.accountId);
@@ -35,7 +28,10 @@ export const searchRouter = createTRPCRouter({
         return results ?? { hits: [] };
       } catch (error) {
         console.error("Search mutation failed:", error);
-        return { hits: [] };
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Search failed. Try again after sync completes.",
+        });
       }
     }),
 });

@@ -2,7 +2,22 @@
 
 import Stripe from 'stripe';
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+let stripeClient: Stripe | null = null;
+
+export function isStripeConfigured(): boolean {
+  return Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_ID);
+}
+
+export function getStripe(): Stripe {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) {
+    throw new Error("Stripe is not configured");
+  }
+
+  stripeClient ??= new Stripe(secretKey, {
     apiVersion: '2026-06-24.dahlia',
     typescript: true,
-});
+  });
+
+  return stripeClient;
+}

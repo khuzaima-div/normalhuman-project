@@ -5,6 +5,13 @@ import { db } from "@/server/db";
 
 export const dynamic = "force-dynamic";
 
+function getPrimaryEmail(event: WebhookEvent): string | null {
+  if (event.type === "user.created" || event.type === "user.updated") {
+    return event.data.email_addresses?.[0]?.email_address ?? null;
+  }
+  return null;
+}
+
 export const POST = async (req: Request) => {
   const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
 
@@ -36,18 +43,40 @@ export const POST = async (req: Request) => {
     return new Response("Invalid webhook signature", { status: 400 });
   }
 
-  if (event.type !== "user.created") {
+  if (event.type === "user.deleted") {
+    const userId = event.data.id;
+    if (!userId) {
+      return new Response("Missing user id", { status: 400 });
+    }
+
+    try {
+      await db.user.delete({ where: { id: userId } });
+    } catch (error) {
+      // Idempotent: user may already be removed
+      console.warn("Clerk user.deleted: user not found or already deleted", error);
+    }
+
+    return new Response("Webhook received", { status: 200 });
+  }
+
+  if (event.type !== "user.created" && event.type !== "user.updated") {
     return new Response("Event ignored", { status: 200 });
   }
 
-  const { id, first_name, last_name, image_url, email_addresses } = event.data;
-  const emailAddress =
-    email_addresses?.[0]?.email_address ?? `${id}@temporary.com`;
+  const { id, first_name, last_name, image_url } = event.data;
+  const emailAddress = getPrimaryEmail(event) ?? `${id}@temporary.com`;
 
   try {
-    await db.user.create({
-      data: {
+    await db.user.upsert({
+      where: { id },
+      create: {
         id,
+        emailAddress,
+        firstName: first_name ?? "",
+        lastName: last_name ?? "",
+        imageUrl: image_url ?? "",
+      },
+      update: {
         emailAddress,
         firstName: first_name ?? "",
         lastName: last_name ?? "",
@@ -56,22 +85,8 @@ export const POST = async (req: Request) => {
     });
 
     return new Response("Webhook received", { status: 200 });
-  } catch {
-    // Idempotent: user may already exist from Aurinko callback fallback
-    try {
-      await db.user.update({
-        where: { id },
-        data: {
-          emailAddress,
-          firstName: first_name ?? "",
-          lastName: last_name ?? "",
-          imageUrl: image_url ?? "",
-        },
-      });
-      return new Response("Webhook received", { status: 200 });
-    } catch (updateError) {
-      console.error("Clerk webhook DB error:", updateError);
-      return new Response("Database insertion failed", { status: 500 });
-    }
+  } catch (error) {
+    console.error("Clerk webhook DB error:", error);
+    return new Response("Database operation failed", { status: 500 });
   }
 };

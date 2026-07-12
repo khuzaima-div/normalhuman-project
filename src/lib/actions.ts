@@ -1,7 +1,7 @@
 'use server';
 
 import { auth } from "@clerk/nextjs/server";
-import { stripe } from "./stripe";
+import { getStripe, isStripeConfigured } from "./stripe";
 import { redirect } from "next/navigation";
 import { db } from "@/server/db";
 
@@ -15,13 +15,22 @@ export async function createCheckoutSession() {
         throw new Error('User not authenticated');
     }
 
+    if (!isStripeConfigured()) {
+        throw new Error('Billing is not configured');
+    }
+
+    const stripe = getStripe();
+    const priceId = process.env.STRIPE_PRICE_ID;
+    if (!priceId) {
+        throw new Error('Billing is not configured');
+    }
+
     // Checkout session create ho raha hai
     const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [
             {
-                // Aapki naye plan ki Price ID (.env se aayegi)
-                price: process.env.STRIPE_PRICE_ID,
+                price: priceId,
                 quantity: 1,
             },
         ],
@@ -39,8 +48,11 @@ export async function createCheckoutSession() {
         },
     });
 
-    // Next.js redirection trigger kar raha hai
-    redirect(session.url!);
+    if (!session.url) {
+        throw new Error('Failed to create checkout session');
+    }
+
+    redirect(session.url);
 }
 
 /**
@@ -52,6 +64,12 @@ export async function createBillingPortalSession() {
     if (!userId) {
         throw new Error('User not authenticated');
     }
+
+    if (!isStripeConfigured()) {
+        throw new Error('Billing is not configured');
+    }
+
+    const stripe = getStripe();
 
     // Database se user ki stripe details fetch ho rahi hain
     const subscription = await db.stripeSubscription.findUnique({
@@ -67,7 +85,11 @@ export async function createBillingPortalSession() {
         return_url: `${process.env.NEXT_PUBLIC_APP_URL}/mail`,
     });
 
-    redirect(session.url!);
+    if (!session.url) {
+        throw new Error('Failed to create billing portal session');
+    }
+
+    redirect(session.url);
 }
 
 /**

@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import type Stripe from "stripe";
 import { NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { db } from "@/server/db";
 
 export const dynamic = "force-dynamic";
@@ -96,6 +96,7 @@ export async function POST(req: Request) {
         return new NextResponse("missing stripe signature", { status: 400 });
     }
 
+    const stripe = getStripe();
     let event: Stripe.Event;
 
     try {

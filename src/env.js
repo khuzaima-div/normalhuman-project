@@ -8,7 +8,14 @@ export const env = createEnv({
       .enum(["development", "test", "production"])
       .default("development"),
     CLERK_SECRET_KEY: z.string().min(1),
-    CLERK_WEBHOOK_SECRET: z.string().min(1).optional(),
+    CLERK_WEBHOOK_SECRET: z
+      .string()
+      .min(1)
+      .optional()
+      .refine(
+        (val) => process.env.NODE_ENV !== "production" || Boolean(val),
+        "CLERK_WEBHOOK_SECRET is required in production",
+      ),
     AURINKO_CLIENT_ID: z.string().min(1),
     AURINKO_CLIENT_SECRET: z.string().min(1),
     AURINKO_WEBHOOK_SECRET: z.string().min(1).optional(),

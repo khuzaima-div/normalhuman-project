@@ -35,7 +35,6 @@ export const POST = async (req: NextRequest) => {
     return NextResponse.json(result, { status: 200 });
   } catch (error: unknown) {
     console.error("Error in initial-sync route:", error);
-    const message = error instanceof Error ? error.message : "INTERNAL_SERVER_ERROR";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 };
