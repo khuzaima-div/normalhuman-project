@@ -1,7 +1,6 @@
-import { create, upsert, search, getByID, type AnyOrama } from "@orama/orama";
+import { count, create, getByID, search, upsert, type AnyOrama } from "@orama/orama";
 import { persist, restore } from "@orama/plugin-data-persistence";
 import { db } from "@/server/db";
-import { getEmbeddings } from "../lib/embeddings";
 
 interface OramaEmailDocument {
     id: string;
@@ -11,69 +10,83 @@ interface OramaEmailDocument {
     from: string;
     to: string[];
     sentAt: string;
-    embeddings: number[];
     threadId: string;
 }
+
+const MAX_BINARY_INDEX_CHARS = 2_000_000;
 
 export class OramaManager {
     // @ts-expect-error Orama instance typed loosely across restore/create
     private orama: AnyOrama;
     private accountId: string;
-    private seenIds = new Set<string>();
 
     constructor(accountId: string) {
         this.accountId = accountId;
     }
 
+    private async createIndex() {
+        return await create({
+            schema: {
+                id: "string",
+                title: "string",
+                body: "string",
+                rawBody: "string",
+                from: "string",
+                to: "string[]",
+                sentAt: "string",
+                threadId: "string",
+            },
+        });
+    }
+
+    async createFreshIndex() {
+        this.orama = await this.createIndex();
+    }
+
     async initialize() {
         const account = await db.account.findUnique({
             where: { id: this.accountId },
-            select: { binaryIndex: true }
+            select: { binaryIndex: true },
         });
 
-        if (!account) throw new Error('Account not found');
+        if (!account) throw new Error("Account not found");
 
-        if (account.binaryIndex) {
-            this.orama = await restore('json', account.binaryIndex);
-        } else {
-            this.orama = await create({
-                schema: {
-                    id: "string",
-                    title: "string",
-                    body: "string",
-                    rawBody: "string",
-                    from: 'string',
-                    to: 'string[]',
-                    sentAt: 'string',
-                    embeddings: 'vector[1536]',
-                    threadId: 'string'
-                },
-            });
+        if (
+            account.binaryIndex &&
+            account.binaryIndex.length <= MAX_BINARY_INDEX_CHARS
+        ) {
+            try {
+                this.orama = await restore("json", account.binaryIndex);
+                return;
+            } catch (error) {
+                console.warn("Failed to restore Orama index, creating fresh:", error);
+            }
+        } else if (account.binaryIndex) {
+            console.warn(
+                `Orama index exceeds ${MAX_BINARY_INDEX_CHARS} chars, creating fresh text-only index`,
+            );
+        }
+
+        this.orama = await this.createIndex();
+    }
+
+    async documentCount(): Promise<number> {
+        return await count(this.orama);
+    }
+
+    async hasDocument(id: string): Promise<boolean> {
+        try {
+            const doc = await getByID(this.orama, id);
+            return doc != null;
+        } catch {
+            return false;
         }
     }
 
-    async insert(
+    async upsertDocument(
         document: OramaEmailDocument,
         options: { persist?: boolean } = {},
     ) {
-        if (this.seenIds.has(document.id)) {
-            return;
-        }
-        this.seenIds.add(document.id);
-
-        try {
-            const existing = await getByID(this.orama, document.id);
-            if (existing) {
-                // Already indexed — skip to avoid duplicate hits
-                if (options.persist !== false) {
-                    // no-op persist
-                }
-                return;
-            }
-        } catch {
-            // Legacy index without id lookup support
-        }
-
         await upsert(this.orama, document);
 
         if (options.persist !== false) {
@@ -81,19 +94,11 @@ export class OramaManager {
         }
     }
 
-    async vectorSearch({ prompt, numResults = 10 }: { prompt: string, numResults?: number }) {
-        const embeddings = await getEmbeddings(prompt);
-        const results = await search(this.orama, {
-            mode: 'hybrid',
+    async vectorSearch({ prompt, numResults = 10 }: { prompt: string; numResults?: number }) {
+        return await search(this.orama, {
             term: prompt,
-            vector: {
-                value: embeddings,
-                property: 'embeddings'
-            },
-            similarity: 0.80,
             limit: numResults,
         });
-        return results;
     }
 
     async search({ term }: { term: string }) {
@@ -103,12 +108,12 @@ export class OramaManager {
     }
 
     async saveIndex() {
-        const index = await persist(this.orama, 'json');
+        const index = await persist(this.orama, "json");
         await db.account.update({
             where: { id: this.accountId },
             data: {
-                binaryIndex: index as string
-            }
+                binaryIndex: index as string,
+            },
         });
     }
 }

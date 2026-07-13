@@ -32,27 +32,29 @@ const AskAI = ({ isCollapsed }: { isCollapsed: boolean }) => {
     },
   })
 
+  const lastMessageContent = messages.at(-1)?.content ?? ''
+
   useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.scrollTo({
-        top: containerRef.current.scrollHeight,
-        behavior: 'smooth',
-      })
-    }
-  }, [messages])
+    const container = containerRef.current
+    if (!container) return
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: 'smooth',
+    })
+  }, [messages.length, lastMessageContent, isLoading])
 
   if (isCollapsed) return null
 
   return (
-    <div className="w-full min-w-0 max-w-full">
+    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
       <div
         className={cn(
-          'flex h-56 min-h-0 w-full max-w-full flex-col overflow-hidden rounded-xl border border-sidebar-border bg-sidebar-surface p-3 shadow-token-xs',
+          'flex h-56 min-h-0 w-full max-w-full shrink-0 flex-col overflow-hidden rounded-xl border border-sidebar-border bg-sidebar-surface p-3 shadow-token-xs',
         )}
       >
         <div
           ref={containerRef}
-          className="scrollbar-none flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain"
+          className="scrollbar-elegant flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain"
           role="log"
           aria-live="polite"
           aria-label="AI chat messages"

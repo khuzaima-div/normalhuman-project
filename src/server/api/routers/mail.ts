@@ -7,6 +7,7 @@ import { syncEmailsToDatabase } from "@/lib/sync-to-db"
 import { recoverStaleSyncStatus, syncAccountNow } from "@/lib/run-initial-sync"
 import { authoriseAccountAccess, getAccountAccessToken } from "./account"
 import { rateLimit } from "@/lib/rate-limit"
+import { getPortfolioEmailCount } from "@/lib/portfolio-queries"
 
 function toBodySnippet(body: string): string {
     return body
@@ -57,9 +58,7 @@ export const mailRouter = createTRPCRouter({
 
             try {
                 const result = await syncAccountNow(input.accountId)
-                const emailCount = await ctx.db.email.count({
-                    where: { accountId: input.accountId },
-                })
+                const emailCount = await getPortfolioEmailCount(input.accountId, ctx.db)
                 const account = await ctx.db.account.findUnique({
                     where: { id: input.accountId },
                     select: {

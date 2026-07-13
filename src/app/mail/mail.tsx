@@ -57,6 +57,22 @@ const normalizeSize = (size: number | string | undefined): number | string => {
 const formatDate = (date: string | Date) =>
   new Date(date).toLocaleDateString(undefined, { month: "short", day: "numeric" })
 
+function isMailNavigationBlockedTarget(): boolean {
+  const active = document.activeElement
+  if (!active) return false
+
+  const tag = active.tagName
+  if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) {
+    return true
+  }
+
+  if (active instanceof HTMLElement && active.isContentEditable) {
+    return true
+  }
+
+  return active.closest('[contenteditable="true"]') !== null
+}
+
 function ThreadListPanel({
   headerTitle,
   view,
@@ -210,7 +226,10 @@ export function MailShell({
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName ?? "")) {
+      if (isMailNavigationBlockedTarget()) {
+        return
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey) {
         return
       }
       if (!threads.length) return

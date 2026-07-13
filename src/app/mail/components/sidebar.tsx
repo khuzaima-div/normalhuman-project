@@ -56,7 +56,7 @@ function SidebarHeader({
   )
 }
 
-function SidebarContent({
+function SidebarNav({
   isCollapsed,
   children,
 }: {
@@ -66,8 +66,27 @@ function SidebarContent({
   return (
     <div
       className={cn(
-        "scrollbar-none min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-3",
+        "w-full min-w-0 shrink-0 px-2 py-3",
         isCollapsed && "px-1.5",
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+function SidebarLower({
+  isCollapsed,
+  children,
+}: {
+  isCollapsed: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      className={cn(
+        "flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3 overflow-hidden border-t border-sidebar-border px-3 pt-4",
+        isCollapsed && "px-2 pt-3",
       )}
     >
       {children}
@@ -85,8 +104,8 @@ function SidebarFooter({
   return (
     <footer
       className={cn(
-        "flex w-full min-w-0 shrink-0 flex-col gap-3 border-t border-sidebar-border px-3 pb-3 pt-4",
-        isCollapsed && "px-2 pt-3",
+        "flex w-full min-w-0 shrink-0 flex-col border-t border-sidebar-border px-3 pb-3 pt-3",
+        isCollapsed && "px-2",
       )}
     >
       {children}
@@ -127,7 +146,7 @@ export function SideBar({ isCollapsed, onNavigate }: SidebarProps) {
         <AccountSwitcher isCollapsed={isCollapsed} />
       </SidebarHeader>
 
-      <SidebarContent isCollapsed={isCollapsed}>
+      <SidebarNav isCollapsed={isCollapsed}>
         <Nav
           isCollapsed={isCollapsed}
           onTabChange={handleTabChange}
@@ -155,16 +174,24 @@ export function SideBar({ isCollapsed, onNavigate }: SidebarProps) {
             },
           ]}
         />
-      </SidebarContent>
+      </SidebarNav>
+
+      <SidebarLower isCollapsed={isCollapsed}>
+        {!isCollapsed ? (
+          <>
+            <div className="w-full min-w-0 shrink-0">
+              <SubscriptionPlanCard isCollapsed={isCollapsed} />
+            </div>
+
+            <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
+              <AskAI isCollapsed={isCollapsed} />
+            </div>
+          </>
+        ) : null}
+      </SidebarLower>
 
       <SidebarFooter isCollapsed={isCollapsed}>
-        <SubscriptionPlanCard isCollapsed={isCollapsed} />
-
-        <div className="w-full min-w-0">
-          <AskAI isCollapsed={isCollapsed} />
-        </div>
-
-        <div className="flex items-center justify-between gap-2 border-t border-sidebar-border pt-3">
+        <div className="flex items-center justify-between gap-2">
           <UserButton
             appearance={{
               elements: {

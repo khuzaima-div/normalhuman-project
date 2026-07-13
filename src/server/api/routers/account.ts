@@ -3,6 +3,8 @@ import { createTRPCRouter, privateProcedure } from "../trpc"
 import type { AppPrismaClient } from "@/server/db"
 import { TRPCError } from "@trpc/server"
 import { recoverStaleSyncStatus } from "@/lib/run-initial-sync"
+import { isPortfolioMode, PORTFOLIO_EMAIL_LIMIT } from "@/lib/portfolio-mode"
+import { getPortfolioScope } from "@/lib/portfolio-queries"
 
 const publicAccountSelect = {
     id: true,
@@ -92,10 +94,16 @@ export const accountRouter = createTRPCRouter({
                 filter.done = true
             }
 
+            const portfolio = await getPortfolioScope(account.id, ctx.db)
+            if (portfolio && portfolio.threadIds.length === 0) {
+                return 0
+            }
+
             return await ctx.db.thread.count({
                 where: {
                     accountId: account.id,
-                    ...filter
+                    ...filter,
+                    ...(portfolio ? { id: { in: portfolio.threadIds } } : {}),
                 }
             })
         }),
@@ -126,13 +134,20 @@ export const accountRouter = createTRPCRouter({
 
             filter.done = safeDone
 
+            const portfolio = await getPortfolioScope(account.id, ctx.db)
+            if (portfolio && portfolio.threadIds.length === 0) {
+                return []
+            }
+
             return await ctx.db.thread.findMany({
                 where: {
                     accountId: account.id,
-                    ...filter
+                    ...filter,
+                    ...(portfolio ? { id: { in: portfolio.threadIds } } : {}),
                 },
                 include: {
                     emails: {
+                        ...(portfolio ? { where: { id: { in: portfolio.emailIds } } } : {}),
                         orderBy: {
                             sentAt: 'asc'
                         },
@@ -148,7 +163,7 @@ export const accountRouter = createTRPCRouter({
                         }
                     }
                 },
-                take: 15,
+                take: isPortfolioMode() ? PORTFOLIO_EMAIL_LIMIT : 15,
                 orderBy: {
                     lastMessageDate: 'desc'
                 }
@@ -164,13 +179,17 @@ export const accountRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId, ctx.db)
 
+            const portfolio = await getPortfolioScope(account.id, ctx.db)
+
             const thread = await ctx.db.thread.findFirst({
                 where: {
                     id: input.threadId,
                     accountId: account.id,
+                    ...(portfolio ? { id: { in: portfolio.threadIds } } : {}),
                 },
                 include: {
                     emails: {
+                        ...(portfolio ? { where: { id: { in: portfolio.emailIds } } } : {}),
                         orderBy: { sentAt: 'asc' },
                         select: {
                             id: true,
@@ -196,7 +215,7 @@ export const accountRouter = createTRPCRouter({
                 }
             })
 
-            if (!thread) {
+            if (!thread || thread.emails.length === 0) {
                 throw new TRPCError({ code: "NOT_FOUND", message: "Thread not found" })
             }
 
@@ -257,13 +276,17 @@ export const accountRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const account = await authoriseAccountAccess(input.accountId, ctx.auth.userId, ctx.db)
 
+            const portfolio = await getPortfolioScope(account.id, ctx.db)
+
             const thread = await ctx.db.thread.findFirst({
                 where: {
                     id: input.threadId,
                     accountId: account.id,
+                    ...(portfolio ? { id: { in: portfolio.threadIds } } : {}),
                 },
                 include: {
                     emails: {
+                        ...(portfolio ? { where: { id: { in: portfolio.emailIds } } } : {}),
                         orderBy: { sentAt: 'asc' },
                         select: {
                             id: true,

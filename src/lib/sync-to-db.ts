@@ -2,7 +2,137 @@
 import type { EmailMessage, EmailAddress } from "@/types";
 import { db } from "@/server/db";
 import { OramaManager } from "@/server/orama";
-import { getEmbeddings } from "./embeddings";
+import { isPortfolioMode, PORTFOLIO_EMAIL_LIMIT } from "./portfolio-mode";
+
+const ORAMA_BODY_LIMIT = 2_000;
+const ORAMA_RAW_BODY_LIMIT = 500;
+
+export async function enforcePortfolioEmailCap(
+    accountId: string,
+    oramaClient?: OramaManager,
+): Promise<string[]> {
+    if (!isPortfolioMode()) return [];
+
+    const allRemoved: string[] = [];
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+        const emails = await db.email.findMany({
+            where: { accountId },
+            orderBy: { sentAt: "desc" },
+            select: { id: true },
+        });
+
+        if (emails.length <= PORTFOLIO_EMAIL_LIMIT) break;
+
+        const excessIds = emails.slice(PORTFOLIO_EMAIL_LIMIT).map((email) => email.id);
+        await db.email.deleteMany({ where: { id: { in: excessIds } } });
+        allRemoved.push(...excessIds);
+    }
+
+    if (allRemoved.length === 0) return [];
+
+    const orphanThreads = await db.thread.findMany({
+        where: { accountId },
+        select: { id: true, _count: { select: { emails: true } } },
+    });
+
+    const orphanIds = orphanThreads
+        .filter((thread) => thread._count.emails === 0)
+        .map((thread) => thread.id);
+
+    if (orphanIds.length > 0) {
+        await db.thread.deleteMany({ where: { id: { in: orphanIds } } });
+    }
+
+    if (oramaClient) {
+        await syncOramaToPortfolioEmails(accountId, oramaClient);
+    }
+
+    console.log(
+        `[portfolio] Trimmed account ${accountId} to ${PORTFOLIO_EMAIL_LIMIT} emails (removed ${allRemoved.length})`,
+    );
+
+    return allRemoved;
+}
+
+async function syncOramaToPortfolioEmails(
+    accountId: string,
+    oramaClient: OramaManager,
+) {
+    await oramaClient.createFreshIndex();
+    await backfillMissingOramaDocuments(accountId, oramaClient);
+}
+
+async function indexEmailInOrama(
+    oramaClient: OramaManager,
+    params: {
+        id: string;
+        subject: string;
+        bodySnippet: string | null;
+        body: string | null;
+        fromName: string | null;
+        fromAddress: string;
+        toAddresses: string[];
+        sentAt: Date;
+        threadId: string;
+    },
+) {
+    await oramaClient.upsertDocument(
+        {
+            id: params.id,
+            title: params.subject || "[No Subject]",
+            body: (params.bodySnippet || "").slice(0, ORAMA_BODY_LIMIT),
+            rawBody: (params.body || "").slice(0, ORAMA_RAW_BODY_LIMIT),
+            from: `${params.fromName || ""} <${params.fromAddress}>`,
+            to: params.toAddresses,
+            sentAt: params.sentAt.toISOString(),
+            threadId: params.threadId,
+        },
+        { persist: false },
+    );
+}
+
+async function backfillMissingOramaDocuments(
+    accountId: string,
+    oramaClient: OramaManager,
+) {
+    const emails = await db.email.findMany({
+        where: { accountId },
+        orderBy: { sentAt: "desc" },
+        ...(isPortfolioMode() ? { take: PORTFOLIO_EMAIL_LIMIT } : {}),
+        include: {
+            from: true,
+            to: { select: { name: true, address: true } },
+        },
+    });
+
+    let backfilled = 0;
+
+    for (const email of emails) {
+        if (await oramaClient.hasDocument(email.id)) {
+            continue;
+        }
+
+        await indexEmailInOrama(oramaClient, {
+            id: email.id,
+            subject: email.subject,
+            bodySnippet: email.bodySnippet,
+            body: email.body,
+            fromName: email.from.name,
+            fromAddress: email.from.address,
+            toAddresses: email.to.map((t) => `${t.name || ""} <${t.address}>`),
+            sentAt: email.sentAt,
+            threadId: email.threadId,
+        });
+        backfilled++;
+    }
+
+    if (backfilled > 0) {
+        console.log(
+            `📇 Backfilled ${backfilled} missing Orama documents for account ${accountId}`,
+        );
+    }
+}
 
 export async function syncEmailsToDatabase(emails: EmailMessage[], accountId: string) {
     console.log(`🔄 Attempting to sync ${emails.length} emails to database for account: ${accountId}`);
@@ -13,7 +143,18 @@ export async function syncEmailsToDatabase(emails: EmailMessage[], accountId: st
         for (const [index, email] of emails.entries()) {
             await upsertEmail(email, accountId, index, oramaClient);
         }
+
+        const removedIds = await enforcePortfolioEmailCap(
+            accountId,
+            isPortfolioMode() ? oramaClient : undefined,
+        );
+
+        if (!isPortfolioMode() || removedIds.length === 0) {
+            await backfillMissingOramaDocuments(accountId, oramaClient);
+        }
+
         await oramaClient.saveIndex();
+
         console.log("✅ All emails synchronized to database and Orama Index successfully.");
     } catch (error) {
         console.error("❌ Critical error during database sync sequence:", error);
@@ -69,7 +210,6 @@ async function upsertEmail(email: EmailMessage, accountId: string, index: number
                 accountId: accountId,
                 subject: email.subject || "[No Subject]",
                 lastMessageDate: new Date(email.sentAt || email.createdTime),
-                // Preserve done — do not reset on sync updates
                 ...(emailLabel === "inbox" ? { inboxStatus: true } : {}),
                 ...(emailLabel === "draft" ? { draftStatus: true } : {}),
                 ...(emailLabel === "sent" ? { sentStatus: true } : {}),
@@ -104,10 +244,11 @@ async function upsertEmail(email: EmailMessage, accountId: string, index: number
             : new Date();
 
         await db.email.upsert({
-            where: { internetMessageId: email.internetMessageId },
+            where: { id: email.id },
             update: {
                 accountId: accountId,
                 threadId: thread.id,
+                internetMessageId: email.internetMessageId,
                 subject: email.subject || "[No Subject]",
                 body: email.body,
                 bodySnippet: email.bodySnippet,
@@ -152,24 +293,17 @@ async function upsertEmail(email: EmailMessage, accountId: string, index: number
             }
         });
 
-        try {
-            const embeddingText = `${email.subject || ""} ${email.bodySnippet || ""}`;
-            const embeddings = await getEmbeddings(embeddingText);
-
-            await oramaClient.insert({
-                id: email.id,
-                title: email.subject || "[No Subject]",
-                body: email.bodySnippet || "",
-                rawBody: email.body || "",
-                from: `${email.from?.name || ""} <${email.from?.address || ""}>`,
-                to: (email.to || []).map(t => `${t.name || ""} <${t.address || " "}>`),
-                sentAt: sentAt.toISOString(),
-                embeddings: embeddings,
-                threadId: thread.id
-            }, { persist: false });
-        } catch (oramaError) {
-            console.error(`⚠️ Orama indexing failed for email ${email.id}:`, oramaError);
-        }
+        await indexEmailInOrama(oramaClient, {
+            id: email.id,
+            subject: email.subject || "[No Subject]",
+            bodySnippet: email.bodySnippet ?? null,
+            body: email.body ?? null,
+            fromName: email.from?.name ?? null,
+            fromAddress: email.from?.address ?? "",
+            toAddresses: (email.to || []).map((t) => `${t.name || ""} <${t.address || " "}>`),
+            sentAt,
+            threadId: thread.id,
+        });
 
         if (email.hasAttachments && email.attachments && email.attachments.length > 0) {
             for (const attachment of email.attachments) {
@@ -222,4 +356,24 @@ async function upsertEmailAddress(address: EmailAddress, accountId: string) {
         console.error(`❌ Failed to upsert email address entity [${address.address}]:`, error);
         return null;
     }
+}
+
+export async function applyPortfolioLimits(accountId: string) {
+    if (!isPortfolioMode()) return;
+
+    await enforcePortfolioEmailCap(accountId);
+    await rebuildOramaIndexForAccount(accountId);
+    await enforcePortfolioEmailCap(accountId);
+}
+
+export async function rebuildOramaIndexForAccount(accountId: string) {
+    await db.account.update({
+        where: { id: accountId },
+        data: { binaryIndex: null },
+    });
+
+    const oramaClient = new OramaManager(accountId);
+    await oramaClient.createFreshIndex();
+    await backfillMissingOramaDocuments(accountId, oramaClient);
+    await oramaClient.saveIndex();
 }

@@ -3,6 +3,7 @@ import type { EmailHeader, EmailMessage, SyncResponse, SyncUpdatedResponse } fro
 import { db } from '@/server/db';
 import axios from 'axios';
 import { syncEmailsToDatabase } from './sync-to-db';
+import { isPortfolioMode, takeLatestEmails } from './portfolio-mode';
 
 const API_BASE_URL = 'https://api.aurinko.io/v1';
 
@@ -199,7 +200,7 @@ class Account {
 
     async performInitialSync() {
         try {
-            const daysWithin = 30;
+            const daysWithin = isPortfolioMode() ? 14 : 30;
             let syncResponse = await this.startSync(daysWithin);
 
             while (!syncResponse.ready) {
@@ -232,6 +233,13 @@ class Account {
                     allEmails = allEmails.concat(catchUpResponse.records);
                     storedDeltaToken = catchUpResponse.nextDeltaToken || storedDeltaToken;
                 }
+            }
+
+            if (isPortfolioMode()) {
+                allEmails = takeLatestEmails(allEmails);
+                console.log(
+                    `[portfolio] Initial sync capped to ${allEmails.length} latest emails`,
+                );
             }
 
             return {

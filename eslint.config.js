@@ -10,9 +10,6 @@ export default tseslint.config(
     ignores: [
       ".next/**",
       "node_modules/**",
-      "testsprite_tests/**",
-      "lint-output.txt",
-      "tsc-output.txt",
     ],
   },
   ...compat.extends("next/core-web-vitals"),

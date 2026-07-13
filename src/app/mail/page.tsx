@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 import { db } from "@/server/db"
+import { logPortfolioStartupStats } from "@/lib/portfolio-queries"
 import { MailErrorBoundary } from "@/components/mail/error-boundary"
 import Mail from "./mail"
 
@@ -22,6 +23,8 @@ export default async function MailDashboard({
   if (accounts.length === 0) {
     redirect("/")
   }
+
+  await logPortfolioStartupStats(accounts[0]!.id, db)
 
   const params = await searchParams
 
