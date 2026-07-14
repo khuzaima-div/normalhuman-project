@@ -10,6 +10,7 @@ export default tseslint.config(
     ignores: [
       ".next/**",
       "node_modules/**",
+      "src/generated/**",
     ],
   },
   ...compat.extends("next/core-web-vitals"),

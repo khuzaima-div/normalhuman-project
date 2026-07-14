@@ -35,10 +35,9 @@
     "global.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "src/generated/**/*.ts",
     "**/*.cjs",
     "**/*.js",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "generated", "scripts"]
+  "exclude": ["node_modules", "generated", "src/generated", "scripts"]
 }
