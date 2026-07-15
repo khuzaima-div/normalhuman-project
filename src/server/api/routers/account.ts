@@ -185,7 +185,7 @@ export const accountRouter = createTRPCRouter({
                 where: {
                     id: input.threadId,
                     accountId: account.id,
-                    ...(portfolio ? { id: { in: portfolio.threadIds } } : {}),
+                    ...(portfolio ? { AND: [{ id: { in: portfolio.threadIds } }] } : {}),
                 },
                 include: {
                     emails: {
@@ -282,7 +282,7 @@ export const accountRouter = createTRPCRouter({
                 where: {
                     id: input.threadId,
                     accountId: account.id,
-                    ...(portfolio ? { id: { in: portfolio.threadIds } } : {}),
+                    ...(portfolio ? { AND: [{ id: { in: portfolio.threadIds } }] } : {}),
                 },
                 include: {
                     emails: {
