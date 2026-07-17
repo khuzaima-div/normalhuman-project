@@ -17,7 +17,12 @@ type AIComposeButtonProps = {
 };
 
 function getAiErrorMessage(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error ?? "");
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : "";
   if (message.includes("Limit reached")) {
     return "You have reached your free daily limit.";
   }
