@@ -1,96 +1,126 @@
-# NormalHuman AI
+# 🚀 NormalHuman AI
 
-An AI-powered email client built with Next.js that combines email management, AI assistance, semantic search, and modern authentication into one application.
+> An AI-powered Gmail client that transforms email management with semantic search, AI-assisted replies, intelligent email composition, and Gmail synchronization.
 
-## Features
-
-- 📧 Gmail integration using Aurinko
-- 🔐 Clerk Authentication
-- 🤖 AI Email Assistant
-- ✍️ AI Inline Reply (Ctrl + J)
-- 🔍 Full-text Email Search (Orama)
-- 📂 Inbox, Sent & Draft folders
-- 💬 AI RAG Chat with your emails
-- 💳 Stripe Subscription
-- 🌙 Modern Responsive UI
-- ⚡ Fast Next.js App Router architecture
+![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI-412991?logo=openai&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-2D3748?logo=prisma)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?logo=postgresql&logoColor=white)
+![Stripe](https://img.shields.io/badge/Stripe-635BFF?logo=stripe&logoColor=white)
 
 ---
 
-## Tech Stack
+## 🌐 Live Demo
 
-### Frontend
+🔗 https://normalhuman-project.vercel.app/
+
+## 💻 GitHub Repository
+
+🔗 https://github.com/khuzaima-div/normalhuman-project
+
+---
+
+# 📖 Overview
+
+NormalHuman AI is a modern AI-powered email client built with Next.js and OpenAI.
+
+Instead of simply displaying emails, it helps users manage their inbox intelligently using semantic search, AI-powered replies, smart email composition, and real-time Gmail synchronization.
+
+The application focuses on improving productivity while keeping a clean, modern, and responsive user experience.
+
+---
+
+# ✨ Features
+
+- 📧 Gmail Account Integration
+- 🔄 Real-time Gmail Synchronization
+- 🤖 AI Email Assistant
+- 💬 AI Compose
+- 🔍 Semantic Email Search
+- ⚡ Fast Inbox Navigation
+- 🌙 Dark & Light Mode
+- 💳 Stripe Subscription Integration
+- 🔐 Secure Authentication with Clerk
+- 📱 Responsive Design
+
+---
+
+# 🛠 Tech Stack
+
+## Frontend
 
 - Next.js 15
-- React 19
+- React
 - TypeScript
-- Tailwind CSS v4
-- TipTap Editor
-- TanStack Query
-- Jotai
-- Framer Motion
+- Tailwind CSS
+- shadcn/ui
 
-### Backend
+## Backend
 
 - tRPC
 - Prisma ORM
 - PostgreSQL
 - Clerk Authentication
-- Aurinko Email API
-- Orama Search
+
+## AI
+
 - OpenAI
-- Stripe
+- LangChain
+- RAG
+- AI Email Assistant
+
+## Cloud
+
+- Vercel
+- AWS S3
 
 ---
 
-## Screenshots
+# 📸 Screenshots
 
-Add screenshots here after deployment.
+## ☀️ Light Mode
 
-Example:
+(Add Light Mode Screenshot Here)
+
+---
+
+## 🌙 Dark Mode
+
+(Add Dark Mode Screenshot Here)
+
+---
+
+# 📂 Project Structure
 
 ```
-/public/screenshots/home.png
-/public/screenshots/inbox.png
-/public/screenshots/chat.png
+src/
+ ├── app/
+ ├── components/
+ ├── actions/
+ ├── lib/
+ ├── server/
+ ├── hooks/
+ ├── styles/
 ```
 
 ---
 
-## Installation
+# 🚀 Getting Started
 
-Clone the repository
-
-```bash
-git clone https://github.com/khuzaima-div/normalhuman-project
-```
-
-Go into the project
+## Clone Repository
 
 ```bash
-cd normalhuman
+git clone https://github.com/khuzaima-div/normalhuman-project.git
 ```
 
-Install packages
+## Install Dependencies
 
 ```bash
 npm install
 ```
 
-Create environment file
-
-```bash
-cp .env.example .env
-```
-
-Run Prisma
-
-```bash
-npx prisma generate
-npx prisma db push
-```
-
-Start development server
+## Run Development Server
 
 ```bash
 npm run dev
@@ -98,90 +128,63 @@ npm run dev
 
 ---
 
-## Environment Variables
+# 🔑 Environment Variables
 
-Configure these variables inside `.env`
+Create a `.env` file.
 
 ```
 DATABASE_URL=
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
-CLERK_SECRET_KEY=
-CLERK_WEBHOOK_SECRET=
-
-AURINKO_CLIENT_ID=
-AURINKO_CLIENT_SECRET=
-
 OPENAI_API_KEY=
-
+CLERK_SECRET_KEY=
+CLERK_PUBLISHABLE_KEY=
 STRIPE_SECRET_KEY=
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
-STRIPE_WEBHOOK_SECRET=
-
-PORTFOLIO_MODE=true
+AURINKO_API_KEY=
+AWS_ACCESS_KEY=
+AWS_SECRET_KEY=
 ```
 
 ---
 
-## Scripts
+# 🧠 AI Capabilities
 
-```bash
-npm run dev
-npm run build
-npm run lint
-npm run typecheck
-npm run start
-```
+- AI Email Replies
+- AI Email Compose
+- Semantic Search
+- Retrieval-Augmented Generation (RAG)
+- Intelligent Email Assistance
 
 ---
 
-## Production Build
+# 🔒 Authentication
 
-```bash
-npm run build
-npm run start
-```
+Authentication is handled using **Clerk**, providing secure user authentication and protected routes.
 
 ---
 
-## Portfolio Mode
+# 💳 Payments
 
-For demonstration purposes the application can run in Portfolio Mode.
-
-- Only the latest emails are displayed
-- Search indexes only portfolio emails
-- Faster syncing
-- Better performance during demos
-
-Enable with
-
-```
-PORTFOLIO_MODE=true
-```
+Stripe is integrated for subscription management and premium feature access.
 
 ---
 
-## Deployment
+# 📈 Future Improvements
 
-Recommended platform:
-
-- Vercel
-
-Required services:
-
-- Neon PostgreSQL
-- Clerk
-- Aurinko
-- OpenAI
-- Stripe
+- AI Email Summaries
+- Calendar Integration
+- Voice Commands
+- Smart Labels
+- Multi-language Support
+- AI Workflow Automation
 
 ---
 
-## Author
+# 👨‍💻 Author
 
-Khuzaima
+**Khuzaima Ramzan**
 
-GitHub:
-https://github.com/khuzaima-div
+- GitHub: https://github.com/khuzaima-div
+- LinkedIn: https://linkedin.com/in/khuzaima-ramzan-9420743a4
 
-LinkedIn:
-www.linkedin.com/in/khuzaima-ramzan-9420743a4
+---
+
+## ⭐ If you like this project, don't forget to star the repository!
