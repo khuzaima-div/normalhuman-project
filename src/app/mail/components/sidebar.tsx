@@ -66,7 +66,7 @@ function SidebarNav({
   return (
     <div
       className={cn(
-        "w-full min-w-0 shrink-0 px-2 py-3",
+        "w-full min-w-0 shrink-0 px-2 pt-2 pb-3",
         isCollapsed && "px-1.5",
       )}
     >

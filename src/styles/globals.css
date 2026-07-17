@@ -343,15 +343,6 @@
     color: var(--muted-foreground);
   }
 
-  .sidebar-section-label {
-    font-size: var(--text-label);
-    line-height: var(--text-label--line-height);
-    font-weight: var(--text-label--font-weight);
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    color: var(--sidebar-muted);
-  }
-
   .sidebar-nav-item {
     transition:
       background-color var(--sidebar-transition),

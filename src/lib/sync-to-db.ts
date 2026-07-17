@@ -2,6 +2,7 @@
 import type { EmailMessage, EmailAddress } from "@/types";
 import { db } from "@/server/db";
 import { OramaManager } from "@/server/orama";
+import { getEmbeddings } from "@/lib/embeddings";
 import { isPortfolioMode, PORTFOLIO_EMAIL_LIMIT } from "./portfolio-mode";
 
 const ORAMA_BODY_LIMIT = 2_000;
@@ -77,6 +78,9 @@ async function indexEmailInOrama(
         threadId: string;
     },
 ) {
+    const embeddingText = `${params.subject || ""} ${params.bodySnippet || ""}`;
+    const embeddings = await getEmbeddings(embeddingText);
+
     await oramaClient.upsertDocument(
         {
             id: params.id,
@@ -86,6 +90,7 @@ async function indexEmailInOrama(
             from: `${params.fromName || ""} <${params.fromAddress}>`,
             to: params.toAddresses,
             sentAt: params.sentAt.toISOString(),
+            embeddings,
             threadId: params.threadId,
         },
         { persist: false },
@@ -293,17 +298,21 @@ async function upsertEmail(email: EmailMessage, accountId: string, index: number
             }
         });
 
-        await indexEmailInOrama(oramaClient, {
-            id: email.id,
-            subject: email.subject || "[No Subject]",
-            bodySnippet: email.bodySnippet ?? null,
-            body: email.body ?? null,
-            fromName: email.from?.name ?? null,
-            fromAddress: email.from?.address ?? "",
-            toAddresses: (email.to || []).map((t) => `${t.name || ""} <${t.address || " "}>`),
-            sentAt,
-            threadId: thread.id,
-        });
+        try {
+            await indexEmailInOrama(oramaClient, {
+                id: email.id,
+                subject: email.subject || "[No Subject]",
+                bodySnippet: email.bodySnippet ?? null,
+                body: email.body ?? null,
+                fromName: email.from?.name ?? null,
+                fromAddress: email.from?.address ?? "",
+                toAddresses: (email.to || []).map((t) => `${t.name || ""} <${t.address || " "}>`),
+                sentAt,
+                threadId: thread.id,
+            });
+        } catch (oramaError) {
+            console.error(`⚠️ Orama indexing failed for email ${email.id}:`, oramaError);
+        }
 
         if (email.hasAttachments && email.attachments && email.attachments.length > 0) {
             for (const attachment of email.attachments) {
@@ -366,6 +375,15 @@ export async function applyPortfolioLimits(accountId: string) {
     await enforcePortfolioEmailCap(accountId);
 }
 
+export async function populateOramaIndex(
+    oramaClient: OramaManager,
+    accountId: string,
+) {
+    await oramaClient.createFreshIndex();
+    await backfillMissingOramaDocuments(accountId, oramaClient);
+    await oramaClient.saveIndex();
+}
+
 export async function rebuildOramaIndexForAccount(accountId: string) {
     await db.account.update({
         where: { id: accountId },
@@ -373,7 +391,5 @@ export async function rebuildOramaIndexForAccount(accountId: string) {
     });
 
     const oramaClient = new OramaManager(accountId);
-    await oramaClient.createFreshIndex();
-    await backfillMissingOramaDocuments(accountId, oramaClient);
-    await oramaClient.saveIndex();
+    await populateOramaIndex(oramaClient, accountId);
 }

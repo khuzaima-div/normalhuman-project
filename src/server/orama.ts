@@ -1,6 +1,7 @@
 import { count, create, getByID, search, upsert, type AnyOrama } from "@orama/orama";
 import { persist, restore } from "@orama/plugin-data-persistence";
 import { db } from "@/server/db";
+import { getEmbeddings } from "@/lib/embeddings";
 
 interface OramaEmailDocument {
     id: string;
@@ -10,10 +11,13 @@ interface OramaEmailDocument {
     from: string;
     to: string[];
     sentAt: string;
+    embeddings: number[];
     threadId: string;
 }
 
-const MAX_BINARY_INDEX_CHARS = 2_000_000;
+// Vector indexes store 1536-dim embeddings as JSON; keep headroom for portfolio-sized indexes.
+const MAX_BINARY_INDEX_CHARS = 50_000_000;
+const VECTOR_SIMILARITY = 0.55;
 
 export class OramaManager {
     // @ts-expect-error Orama instance typed loosely across restore/create
@@ -34,6 +38,7 @@ export class OramaManager {
                 from: "string",
                 to: "string[]",
                 sentAt: "string",
+                embeddings: "vector[1536]",
                 threadId: "string",
             },
         });
@@ -56,6 +61,8 @@ export class OramaManager {
             account.binaryIndex.length <= MAX_BINARY_INDEX_CHARS
         ) {
             try {
+                // After restore, Orama exposes a placeholder schema — do not inspect it
+                // to decide whether embeddings exist (that false-negative wiped valid indexes).
                 this.orama = await restore("json", account.binaryIndex);
                 return;
             } catch (error) {
@@ -63,7 +70,7 @@ export class OramaManager {
             }
         } else if (account.binaryIndex) {
             console.warn(
-                `Orama index exceeds ${MAX_BINARY_INDEX_CHARS} chars, creating fresh text-only index`,
+                `Orama index exceeds ${MAX_BINARY_INDEX_CHARS} chars, creating fresh vector index`,
             );
         }
 
@@ -95,10 +102,29 @@ export class OramaManager {
     }
 
     async vectorSearch({ prompt, numResults = 10 }: { prompt: string; numResults?: number }) {
-        return await search(this.orama, {
-            term: prompt,
-            limit: numResults,
-        });
+        try {
+            const embeddings = await getEmbeddings(prompt);
+            return await search(this.orama, {
+                mode: "hybrid",
+                term: prompt,
+                vector: {
+                    value: embeddings,
+                    property: "embeddings",
+                },
+                similarity: VECTOR_SIMILARITY,
+                limit: numResults,
+            });
+        } catch (error) {
+            // Legacy text-only indexes (or transient vector errors) fall back to full-text.
+            console.warn(
+                "Hybrid vector search failed, falling back to full-text search:",
+                error,
+            );
+            return await search(this.orama, {
+                term: prompt,
+                limit: numResults,
+            });
+        }
     }
 
     async search({ term }: { term: string }) {

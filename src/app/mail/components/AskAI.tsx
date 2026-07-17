@@ -46,10 +46,11 @@ const AskAI = ({ isCollapsed }: { isCollapsed: boolean }) => {
   if (isCollapsed) return null
 
   return (
-    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
+    <div className="@container flex min-h-0 w-full min-w-0 flex-1 flex-col">
       <div
         className={cn(
-          'flex h-56 min-h-0 w-full max-w-full shrink-0 flex-col overflow-hidden rounded-xl border border-sidebar-border bg-sidebar-surface p-3 shadow-token-xs',
+          'flex h-56 min-h-0 w-full max-w-full shrink-0 flex-col overflow-hidden rounded-xl border border-sidebar-border bg-sidebar-surface shadow-token-xs',
+          'p-2 @[240px]:p-3',
         )}
       >
         <div
@@ -60,19 +61,19 @@ const AskAI = ({ isCollapsed }: { isCollapsed: boolean }) => {
           aria-label="AI chat messages"
         >
           {messages.length === 0 ? (
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-1 py-2 text-center">
-              <div className="mb-3 flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Sparkles className="size-4" strokeWidth={2.25} />
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-0.5 py-1 text-center @[240px]:px-1 @[240px]:py-2">
+              <div className="mb-2 flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary @[240px]:mb-3 @[240px]:size-9">
+                <Sparkles className="size-3.5 @[240px]:size-4" strokeWidth={2.25} />
               </div>
 
               <h3 className="text-body font-semibold tracking-tight text-foreground">
                 Ask about your emails
               </h3>
-              <p className="mt-1 max-w-full text-caption leading-normal text-muted-foreground">
+              <p className="mt-1 hidden max-w-full text-caption leading-normal text-muted-foreground @[240px]:block">
                 Summaries, meeting times, order tracking — all from your inbox.
               </p>
 
-              <div className="mt-3 flex max-w-full flex-wrap justify-center gap-1.5">
+              <div className="mt-2 flex w-full max-w-full flex-row flex-wrap justify-center gap-1.5 @[240px]:mt-3">
                 {SUGGESTIONS.map((suggestion) => (
                   <button
                     key={suggestion}
@@ -83,9 +84,9 @@ const AskAI = ({ isCollapsed }: { isCollapsed: boolean }) => {
                       } as React.ChangeEvent<HTMLInputElement>)
                     }
                     className={cn(
-                      'max-w-full cursor-pointer truncate rounded-md border border-border bg-background px-2.5 py-1.5',
-                      'text-label font-medium text-foreground transition-colors duration-150',
-                      'hover:bg-muted',
+                      'min-w-0 flex-1 basis-0 cursor-pointer truncate rounded-full border border-primary/20 bg-primary/5 px-2 py-1',
+                      'text-label font-medium text-foreground transition-[background-color,border-color,color] duration-150',
+                      'hover:border-primary/30 hover:bg-primary/10 hover:text-primary',
                     )}
                   >
                     {suggestion}
@@ -119,7 +120,7 @@ const AskAI = ({ isCollapsed }: { isCollapsed: boolean }) => {
         <form
           onSubmit={handleSubmit}
           className={cn(
-            'relative mt-2 flex shrink-0 items-center gap-2 rounded-lg border border-border bg-background px-3 py-2',
+            'relative mt-2 flex shrink-0 items-center gap-2 rounded-lg border border-border bg-background px-2.5 py-1.5 @[240px]:px-3 @[240px]:py-2',
             'transition-[border-color,box-shadow] duration-200',
             'focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30',
           )}

@@ -88,11 +88,11 @@ export function SubscriptionPlanCard({ isCollapsed }: SubscriptionPlanCardProps)
   }
 
   return (
-    <div className="w-full min-w-0">
+    <div className="@container w-full min-w-0">
       <div className={cardSurfaceClass}>
         <div className="relative z-10 flex min-w-0 flex-1 flex-col justify-between gap-2.5 pr-1">
           <div className="min-w-0 space-y-1">
-            <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+            <div className="flex min-w-0 flex-col gap-0.5">
               <p className="text-title font-semibold text-sidebar-foreground">
                 {isPro ? "Pro Plan" : "Basic Plan"}
               </p>
@@ -141,13 +141,13 @@ export function SubscriptionPlanCard({ isCollapsed }: SubscriptionPlanCardProps)
           )}
         </div>
 
-        <div className="relative flex shrink-0 items-end self-stretch pl-1">
+        <div className="relative hidden shrink-0 items-end self-stretch pl-1 @[240px]:flex">
           <Image
             src="/bot.webp"
             alt=""
             width={96}
             height={96}
-            className="h-14 w-auto max-w-[4.5rem] object-contain object-bottom opacity-70 sm:h-16 sm:max-w-[5rem] md:h-20 md:max-w-[6rem]"
+            className="h-12 w-auto max-w-[3rem] object-contain object-bottom opacity-70"
             priority={false}
           />
         </div>

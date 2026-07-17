@@ -9,11 +9,20 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 type AIComposeButtonProps = {
   isComposing?: boolean;
   onGenerate: (prompt: string) => Promise<void>;
 };
+
+function getAiErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  if (message.includes("Limit reached")) {
+    return "You have reached your free daily limit.";
+  }
+  return "Something went wrong. Please try again.";
+}
 
 export default function AIComposeButton({ onGenerate }: AIComposeButtonProps) {
   const [prompt, setPrompt] = React.useState("");
@@ -31,6 +40,7 @@ export default function AIComposeButton({ onGenerate }: AIComposeButtonProps) {
       setIsOpen(false);
     } catch (error) {
       console.error("Failed to generate with AI:", error);
+      toast.error(getAiErrorMessage(error));
     } finally {
       setIsLoading(false);
     }

@@ -32,7 +32,17 @@ import { readStreamableValue } from 'ai/rsc'
 
 import { turndown } from '@/lib/turndown'
 
+import { toast } from 'sonner'
+
 import AIComposeButton from './ai-compose-button'
+
+function getAiErrorMessage(error: unknown): string {
+    const message = error instanceof Error ? error.message : String(error ?? '')
+    if (message.includes('Limit reached')) {
+        return 'You have reached your free daily limit.'
+    }
+    return 'Something went wrong. Please try again.'
+}
 
 function isEditorReady(editor: Editor | null): editor is Editor {
     return !!editor && !editor.isDestroyed && !!editor.view?.state
@@ -241,6 +251,7 @@ export default function EmailEditor({
                 }
             } catch (error) {
                 console.error("Autocomplete failed:", error)
+                toast.error(getAiErrorMessage(error))
             }
         },
         [editor, subject, to, toValues],
@@ -275,6 +286,7 @@ export default function EmailEditor({
                 }
             } catch (error) {
                 console.error("AI Draft Generation failed:", error)
+                throw error
             }
         },
         [editor, replyToContent],

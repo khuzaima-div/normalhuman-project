@@ -55,10 +55,6 @@ export function Nav({ links, isCollapsed, onTabChange }: NavProps) {
       data-collapsed={isCollapsed}
       className="group flex min-h-0 w-full flex-col data-[collapsed=true]:items-center"
     >
-      {!isCollapsed && (
-        <p className="sidebar-section-label px-2 pb-2 pt-0.5">Mailbox</p>
-      )}
-
       <nav
         aria-label="Mailbox navigation"
         className={cn(

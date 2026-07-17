@@ -3,6 +3,7 @@ import { OpenAIStream, StreamingTextResponse } from "ai";
 import { NextResponse } from "next/server";
 import { OramaManager } from "@/server/orama";
 import { buildEmailRagContext } from "@/lib/rag-context";
+import { populateOramaIndex } from "@/lib/sync-to-db";
 import { db } from "@/server/db";
 import { auth } from "@clerk/nextjs/server";
 import { authoriseAccountAccess } from "@/server/api/routers/account";
@@ -75,8 +76,21 @@ export async function POST(req: Request) {
         const oramaManager = new OramaManager(accountId);
         await oramaManager.initialize();
 
+        // Populate THIS in-memory instance when empty — do not re-initialize after rebuild
+        // (a second initialize previously wiped a valid restored index via a broken schema check).
+        if ((await oramaManager.documentCount()) === 0) {
+            console.log(
+                `Orama index empty for account ${accountId}, rebuilding with embeddings…`,
+            );
+            await populateOramaIndex(oramaManager, accountId);
+        }
+
+        const docCount = await oramaManager.documentCount();
         const context = await oramaManager.vectorSearch({ prompt: lastMessage.content });
         const hits = context.hits ?? [];
+        console.log(
+            `Ask AI RAG account=${accountId} docs=${docCount} hits=${hits.length}`,
+        );
 
         const emailContextStrings = buildEmailRagContext(hits);
 

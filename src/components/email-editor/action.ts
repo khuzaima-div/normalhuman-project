@@ -12,6 +12,7 @@ const MAX_PROMPT_LENGTH = 2_000;
 const MAX_CURRENT_TEXT_LENGTH = 10_000;
 const MAX_SUBJECT_LENGTH = 500;
 const MAX_RECIPIENT_LENGTH = 320;
+const COMPOSE_MODEL = 'gpt-4o-mini' as const;
 
 async function assertAiComposeAllowed(): Promise<string> {
     const { userId } = await auth();
@@ -53,7 +54,7 @@ export async function generateEmail(context: string, prompt: string) {
     void (async () => {
         try {
             const { textStream } = await streamText({
-                model: openai('gpt-4-turbo') as Parameters<typeof streamText>[0]['model'],
+                model: openai(COMPOSE_MODEL) as Parameters<typeof streamText>[0]['model'],
                 prompt: `
 You are an AI email assistant embedded in an email client app. Your purpose is to help the user compose or reply to emails perfectly.
 
@@ -83,7 +84,10 @@ When responding, follow these rules strictly:
         } catch (error) {
             await releaseChatCredit(userId);
             console.error('generateEmail failed:', error);
-            stream.done();
+            // Next.js RSC can only serialize plain values, so send the message string.
+            stream.error(
+                error instanceof Error ? error.message : 'AI generation failed',
+            );
         }
     })();
 
@@ -116,7 +120,7 @@ export async function generate(currentText: string, subject: string, recipient: 
     void (async () => {
         try {
             const { textStream } = await streamText({
-                model: openai('gpt-4-turbo') as Parameters<typeof streamText>[0]['model'],
+                model: openai(COMPOSE_MODEL) as Parameters<typeof streamText>[0]['model'],
                 prompt: `
 You are an AI email assistant that helps users write, continue, and improve email content.
 
@@ -138,7 +142,10 @@ Continue the email naturally, preserving the existing draft style and tone. Do n
         } catch (error) {
             await releaseChatCredit(userId);
             console.error('generate failed:', error);
-            stream.done();
+            // Next.js RSC can only serialize plain values, so send the message string.
+            stream.error(
+                error instanceof Error ? error.message : 'AI autocomplete failed',
+            );
         }
     })();
 
