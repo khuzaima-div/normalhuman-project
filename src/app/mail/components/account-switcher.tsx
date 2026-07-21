@@ -79,20 +79,22 @@ export function AccountSwitcher({ isCollapsed }: AccountSwitcherProps) {
             onClick={() => {
               if (isRedirecting) return
               setIsRedirecting(true)
-              window.location.href = "/api/aurinko/auth?serviceType=IMAP"
+              window.location.href = "/api/aurinko/auth?serviceType=Google"
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault()
                 if (isRedirecting) return
                 setIsRedirecting(true)
-                window.location.href = "/api/aurinko/auth?serviceType=IMAP"
+                window.location.href = "/api/aurinko/auth?serviceType=Google"
               }
             }}
             className="mt-1 flex cursor-pointer items-center gap-2 border-t border-border px-3 py-2.5 text-caption text-muted-foreground transition-colors duration-150 hover:text-primary"
           >
             <Plus className="h-3.5 w-3.5" />
-            <span className="font-medium">Add Account</span>
+            <span className="font-medium">
+              {accounts.length > 0 ? "Reconnect / Add Gmail" : "Add Account"}
+            </span>
           </div>
         </SelectContent>
       </Select>

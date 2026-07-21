@@ -1,6 +1,7 @@
 generator client {
+  // Default output (node_modules/@prisma/client) — custom paths under D:\
+  // trigger Windows EPERM scandir on C:\Users\...\Application Data during next build.
   provider      = "prisma-client-js"
-  output        = "../src/generated/prisma"
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 

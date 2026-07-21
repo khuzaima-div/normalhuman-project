@@ -7,8 +7,40 @@ import { isPortfolioMode, takeLatestEmails } from './portfolio-mode';
 
 const API_BASE_URL = 'https://api.aurinko.io/v1';
 
+function isNetworkReachabilityError(error: unknown): boolean {
+    const candidates: string[] = [];
+    if (axios.isAxiosError(error)) {
+        if (error.code) candidates.push(error.code);
+        if (error.message) candidates.push(error.message);
+        const cause = error.cause;
+        if (cause instanceof Error) {
+            candidates.push(cause.message);
+            const causeCode = (cause as NodeJS.ErrnoException).code;
+            if (causeCode) candidates.push(causeCode);
+        }
+    } else if (error instanceof Error) {
+        candidates.push(error.message);
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code) candidates.push(code);
+    }
+    const joined = candidates.join(" ").toUpperCase();
+    return (
+        joined.includes("ETIMEDOUT") ||
+        joined.includes("ECONNRESET") ||
+        joined.includes("ECONNREFUSED") ||
+        joined.includes("ENOTFOUND") ||
+        joined.includes("EAI_AGAIN") ||
+        joined.includes("NETWORK ERROR")
+    );
+}
+
 /** Map Aurinko HTTP errors to user-facing messages. */
 export function mapAurinkoError(error: unknown): Error {
+    if (isNetworkReachabilityError(error)) {
+        return new Error(
+            "Cannot reach Aurinko — check your network/VPN and try again.",
+        );
+    }
     if (axios.isAxiosError(error)) {
         const status = error.response?.status;
         const code =

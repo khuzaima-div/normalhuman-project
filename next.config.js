@@ -1,4 +1,9 @@
 /** @type {import("next").NextConfig} */
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -17,6 +22,8 @@ if (process.env.NODE_ENV === "production") {
 }
 
 const config = {
+  // Keep file tracing inside this project (Windows + non-C: drives).
+  outputFileTracingRoot: path.join(__dirname),
   async headers() {
     return [
       {
