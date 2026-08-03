@@ -1,4 +1,4 @@
-import Account, { mapAurinkoError } from "@/lib/account";
+import Account, { isInvalidSyncTokenError, mapAurinkoError } from "@/lib/account";
 import { syncEmailsToDatabase } from "@/lib/sync-to-db";
 import { db } from "@/server/db";
 import { env } from "@/env";
@@ -158,6 +158,8 @@ export async function syncAccountNow(accountId: string) {
     const account = new Account(dbAccount.accessToken);
 
     try {
+      // syncEmails() itself falls back to initial sync when nextDeltaToken is
+      // null or Aurinko rejects it as invalid — so both paths are covered here.
       if (dbAccount.nextDeltaToken) {
         await account.syncEmails();
         await markAccountReady(accountId);
@@ -195,6 +197,52 @@ export async function syncAccountNow(accountId: string) {
         deltaToken: response.deltaToken,
       };
     } catch (error) {
+      // Stale delta token: clear it and re-seed via initial sync (repairs reconnect).
+      if (isInvalidSyncTokenError(error)) {
+        console.warn(
+          `[syncAccountNow] Invalid delta token for ${accountId}; clearing and running initial sync.`,
+        );
+        await db.account.update({
+          where: { id: accountId },
+          data: { nextDeltaToken: null, syncStatus: "syncing" },
+        });
+
+        try {
+          const response = await withTimeout(
+            account.performInitialSync(),
+            INITIAL_SYNC_TIMEOUT_MS,
+            "performInitialSync",
+          );
+
+          if (!response) {
+            throw new Error("FAILED_TO_SYNC");
+          }
+
+          await withTimeout(
+            syncEmailsToDatabase(response.emails, accountId),
+            INITIAL_SYNC_TIMEOUT_MS,
+            "syncEmailsToDatabase",
+          );
+
+          await markAccountReady(accountId, {
+            nextDeltaToken: response.deltaToken,
+          });
+
+          return {
+            mode: "initial" as const,
+            success: true as const,
+            emailCount: response.emails.length,
+            deltaToken: response.deltaToken,
+          };
+        } catch (retryError) {
+          await db.account.update({
+            where: { id: accountId },
+            data: { syncStatus: "error" },
+          });
+          throw mapAurinkoError(retryError);
+        }
+      }
+
       await db.account.update({
         where: { id: accountId },
         data: { syncStatus: "error" },

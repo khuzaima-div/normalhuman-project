@@ -248,59 +248,82 @@ async function upsertEmail(email: EmailMessage, accountId: string, index: number
             ? new Date(email.lastModifiedTime)
             : new Date();
 
-        await db.email.upsert({
+        // After Aurinko reconnect, message ids can change while internetMessageId stays stable.
+        // Resolve by id first, then by internetMessageId, to avoid unique conflicts on either key.
+        const existingById = await db.email.findUnique({
             where: { id: email.id },
-            update: {
-                accountId: accountId,
-                threadId: thread.id,
-                internetMessageId: email.internetMessageId,
-                subject: email.subject || "[No Subject]",
-                body: email.body,
-                bodySnippet: email.bodySnippet,
-                sysLabels: email.sysLabels,
-                keywords: email.keywords,
-                sysClassifications: email.sysClassifications,
-                lastModifiedTime,
-                sentAt,
-                receivedAt,
-                hasAttachments: email.hasAttachments || false,
-                emailLabel: emailLabel,
-                fromId: fromId,
-                to: { set: toConnect },
-                cc: { set: ccConnect },
-                bcc: { set: bccConnect },
-                replyTo: { set: replyToConnect },
-            },
-            create: {
-                id: email.id,
-                threadId: thread.id,
-                accountId: accountId,
-                internetMessageId: email.internetMessageId,
-                subject: email.subject || "[No Subject]",
-                body: email.body,
-                bodySnippet: email.bodySnippet,
-                createdTime: (email.createdTime && !isNaN(Date.parse(email.createdTime)))
-                    ? new Date(email.createdTime)
-                    : new Date(),
-                lastModifiedTime,
-                sentAt,
-                receivedAt,
-                sysLabels: email.sysLabels,
-                keywords: email.keywords,
-                sysClassifications: email.sysClassifications,
-                hasAttachments: email.hasAttachments || false,
-                emailLabel: emailLabel,
-                fromId: fromId,
-                to: { connect: toConnect },
-                cc: { connect: ccConnect },
-                bcc: { connect: bccConnect },
-                replyTo: { connect: replyToConnect },
-            }
+            select: { id: true },
         });
+        const existingByMessageId =
+            !existingById && email.internetMessageId
+                ? await db.email.findUnique({
+                    where: { internetMessageId: email.internetMessageId },
+                    select: { id: true },
+                })
+                : null;
+        const existingEmailId = existingById?.id ?? existingByMessageId?.id;
+        const persistedEmailId = existingEmailId ?? email.id;
+
+        const emailUpdateData = {
+            accountId: accountId,
+            threadId: thread.id,
+            internetMessageId: email.internetMessageId,
+            subject: email.subject || "[No Subject]",
+            body: email.body,
+            bodySnippet: email.bodySnippet,
+            sysLabels: email.sysLabels,
+            keywords: email.keywords,
+            sysClassifications: email.sysClassifications,
+            lastModifiedTime,
+            sentAt,
+            receivedAt,
+            hasAttachments: email.hasAttachments || false,
+            emailLabel: emailLabel,
+            fromId: fromId,
+            to: { set: toConnect },
+            cc: { set: ccConnect },
+            bcc: { set: bccConnect },
+            replyTo: { set: replyToConnect },
+        };
+
+        if (existingEmailId) {
+            await db.email.update({
+                where: { id: existingEmailId },
+                data: emailUpdateData,
+            });
+        } else {
+            await db.email.create({
+                data: {
+                    id: email.id,
+                    threadId: thread.id,
+                    accountId: accountId,
+                    internetMessageId: email.internetMessageId,
+                    subject: email.subject || "[No Subject]",
+                    body: email.body,
+                    bodySnippet: email.bodySnippet,
+                    createdTime: (email.createdTime && !isNaN(Date.parse(email.createdTime)))
+                        ? new Date(email.createdTime)
+                        : new Date(),
+                    lastModifiedTime,
+                    sentAt,
+                    receivedAt,
+                    sysLabels: email.sysLabels,
+                    keywords: email.keywords,
+                    sysClassifications: email.sysClassifications,
+                    hasAttachments: email.hasAttachments || false,
+                    emailLabel: emailLabel,
+                    fromId: fromId,
+                    to: { connect: toConnect },
+                    cc: { connect: ccConnect },
+                    bcc: { connect: bccConnect },
+                    replyTo: { connect: replyToConnect },
+                },
+            });
+        }
 
         try {
             await indexEmailInOrama(oramaClient, {
-                id: email.id,
+                id: persistedEmailId,
                 subject: email.subject || "[No Subject]",
                 bodySnippet: email.bodySnippet ?? null,
                 body: email.body ?? null,
@@ -311,7 +334,7 @@ async function upsertEmail(email: EmailMessage, accountId: string, index: number
                 threadId: thread.id,
             });
         } catch (oramaError) {
-            console.error(`⚠️ Orama indexing failed for email ${email.id}:`, oramaError);
+            console.error(`⚠️ Orama indexing failed for email ${persistedEmailId}:`, oramaError);
         }
 
         if (email.hasAttachments && email.attachments && email.attachments.length > 0) {
@@ -321,7 +344,7 @@ async function upsertEmail(email: EmailMessage, accountId: string, index: number
                     update: {},
                     create: {
                         id: attachment.id,
-                        emailId: email.id,
+                        emailId: persistedEmailId,
                         name: attachment.name || "Untitled Attachment",
                         mimeType: attachment.mimeType,
                         size: attachment.size,

@@ -3,7 +3,7 @@ import { auth, currentUser } from "@clerk/nextjs/server"
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
 import { exchangeCodeForAccessToken, getAccountDetails } from "@/lib/aurinko"
-import { runInitialSync, syncAccountNow } from "@/lib/run-initial-sync"
+import { runInitialSync } from "@/lib/run-initial-sync"
 import { db } from "@/server/db"
 import { waitUntil } from "@vercel/functions"
 import { assertAccountAllowed, BillingLimitError } from "@/lib/billing"
@@ -79,7 +79,7 @@ export const GET = async (req: NextRequest) => {
         const accountId = token.accountId.toString()
         const existingAccount = await db.account.findUnique({
             where: { id: accountId },
-            select: { userId: true, nextDeltaToken: true },
+            select: { userId: true },
         })
 
         if (existingAccount && existingAccount.userId !== userId) {
@@ -96,7 +96,7 @@ export const GET = async (req: NextRequest) => {
                     userId: existingUser.id,
                     emailAddress: { equals: accountDetails.email, mode: "insensitive" },
                 },
-                select: { id: true, nextDeltaToken: true },
+                select: { id: true },
             })
             : null
 
@@ -115,11 +115,9 @@ export const GET = async (req: NextRequest) => {
             }
         }
 
-        // 5. Persist token — reconnect may need to migrate Account.id (ON UPDATE CASCADE)
-        const hadDeltaToken = Boolean(
-            existingAccount?.nextDeltaToken ?? accountByEmail?.nextDeltaToken,
-        )
-
+        // 5. Persist token — reconnect may need to migrate Account.id (ON UPDATE CASCADE).
+        // Always clear nextDeltaToken on OAuth link/reconnect: old delta tokens belong to a
+        // previous Aurinko sync session and cause "Sync token is not valid".
         if (accountByEmail && accountByEmail.id !== accountId) {
             await db.account.update({
                 where: { id: accountByEmail.id },
@@ -128,6 +126,7 @@ export const GET = async (req: NextRequest) => {
                     accessToken: token.accessToken,
                     emailAddress: accountDetails.email,
                     name: accountDetails.name,
+                    nextDeltaToken: null,
                 },
             })
         } else {
@@ -139,6 +138,7 @@ export const GET = async (req: NextRequest) => {
                     accessToken: token.accessToken,
                     emailAddress: accountDetails.email,
                     name: accountDetails.name,
+                    nextDeltaToken: null,
                 },
                 create: {
                     id: accountId,
@@ -151,12 +151,11 @@ export const GET = async (req: NextRequest) => {
             })
         }
 
-        // After link/reconnect: delta sync when possible, otherwise full initial sync
+        // Fresh OAuth session → always seed via initial sync (never reuse stale delta tokens)
         waitUntil(
-            (hadDeltaToken ? syncAccountNow(accountId) : runInitialSync(accountId))
-                .catch((error) => {
-                    console.error("Failed to run sync after Aurinko link:", error);
-                }),
+            runInitialSync(accountId).catch((error) => {
+                console.error("Failed to run sync after Aurinko link:", error);
+            }),
         );
 
         const redirectResponse = NextResponse.redirect(new URL(`/mail?accountId=${accountId}`, req.nextUrl.origin));

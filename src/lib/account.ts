@@ -72,6 +72,25 @@ export function mapAurinkoError(error: unknown): Error {
     return new Error("Aurinko request failed");
 }
 
+/** True when Aurinko rejects a stale/invalid delta sync token. */
+export function isInvalidSyncTokenError(error: unknown): boolean {
+    const chunks: string[] = [mapAurinkoError(error).message];
+    if (axios.isAxiosError(error) && error.response?.data != null) {
+        chunks.push(
+            typeof error.response.data === "string"
+                ? error.response.data
+                : JSON.stringify(error.response.data),
+        );
+    }
+    const haystack = chunks.join(" ").toLowerCase();
+    return (
+        haystack.includes("sync token is not valid") ||
+        haystack.includes("invalid sync token") ||
+        haystack.includes("delta token is not valid") ||
+        haystack.includes("invalid delta token")
+    );
+}
+
 class Account {
     private token: string;
 
@@ -157,59 +176,78 @@ class Account {
             console.warn(
                 `[syncEmails] Account ${account.id} has null nextDeltaToken; falling back to initial sync override.`,
             );
-            const initial = await this.performInitialSync();
-            if (initial?.emails?.length) {
-                await syncEmailsToDatabase(initial.emails, account.id);
-            }
-            if (initial?.deltaToken) {
-                await db.account.update({
-                    where: { id: account.id },
-                    data: {
-                        nextDeltaToken: initial.deltaToken,
-                        syncStatus: "idle",
-                        lastSyncedAt: new Date(),
-                    } as any,
-                });
-            } else {
-                await db.account.update({
-                    where: { id: account.id },
-                    data: {
-                        syncStatus: "idle",
-                        lastSyncedAt: new Date(),
-                    } as any,
-                });
-            }
+            await this.applyInitialSyncOverride(account.id);
             return;
         }
-        
-        let response = await this.getUpdatedEmails({ deltaToken: account.nextDeltaToken });
-        let allEmails: EmailMessage[] = response.records || [];
-        let storedDeltaToken = response.nextDeltaToken || account.nextDeltaToken;
 
-        while (response.nextPageToken) {
-            response = await this.getUpdatedEmails({ pageToken: response.nextPageToken });
-            if (response.records) {
-                allEmails = allEmails.concat(response.records);
+        try {
+            let response = await this.getUpdatedEmails({ deltaToken: account.nextDeltaToken });
+            let allEmails: EmailMessage[] = response.records || [];
+            let storedDeltaToken = response.nextDeltaToken || account.nextDeltaToken;
+
+            while (response.nextPageToken) {
+                response = await this.getUpdatedEmails({ pageToken: response.nextPageToken });
+                if (response.records) {
+                    allEmails = allEmails.concat(response.records);
+                }
+                if (response.nextDeltaToken) {
+                    storedDeltaToken = response.nextDeltaToken;
+                }
             }
-            if (response.nextDeltaToken) {
-                storedDeltaToken = response.nextDeltaToken;
+
+            if (allEmails.length > 0) {
+                await syncEmailsToDatabase(allEmails, account.id);
             }
-        }
 
-        if (allEmails.length > 0) {
-            await syncEmailsToDatabase(allEmails, account.id);
+            await db.account.update({
+                where: {
+                    id: account.id,
+                },
+                data: {
+                    nextDeltaToken: storedDeltaToken,
+                    syncStatus: "idle",
+                    lastSyncedAt: new Date(),
+                } as any
+            });
+        } catch (error) {
+            if (!isInvalidSyncTokenError(error)) {
+                throw mapAurinkoError(error);
+            }
+            console.warn(
+                `[syncEmails] Account ${account.id} has invalid nextDeltaToken; clearing and re-running initial sync.`,
+            );
+            await db.account.update({
+                where: { id: account.id },
+                data: { nextDeltaToken: null } as any,
+            });
+            await this.applyInitialSyncOverride(account.id);
         }
+    }
 
-        await db.account.update({
-            where: {
-                id: account.id,
-            },
-            data: {
-                nextDeltaToken: storedDeltaToken,
-                syncStatus: "idle",
-                lastSyncedAt: new Date(),
-            } as any
-        });
+    /** Seed mailbox via performInitialSync and persist the new delta token. */
+    private async applyInitialSyncOverride(accountId: string) {
+        const initial = await this.performInitialSync();
+        if (initial?.emails?.length) {
+            await syncEmailsToDatabase(initial.emails, accountId);
+        }
+        if (initial?.deltaToken) {
+            await db.account.update({
+                where: { id: accountId },
+                data: {
+                    nextDeltaToken: initial.deltaToken,
+                    syncStatus: "idle",
+                    lastSyncedAt: new Date(),
+                } as any,
+            });
+        } else {
+            await db.account.update({
+                where: { id: accountId },
+                data: {
+                    syncStatus: "idle",
+                    lastSyncedAt: new Date(),
+                } as any,
+            });
+        }
     }
 
     async getUpdatedEmails({ deltaToken, pageToken }: { deltaToken?: string, pageToken?: string }): Promise<SyncUpdatedResponse> {
@@ -220,14 +258,18 @@ class Account {
         if (pageToken) {
             params.pageToken = pageToken;
         }
-        const response = await axios.get<SyncUpdatedResponse>(
-            `${API_BASE_URL}/email/sync/updated`,
-            {
-                params,
-                headers: { Authorization: `Bearer ${this.token}` }
-            }
-        );
-        return response.data;
+        try {
+            const response = await axios.get<SyncUpdatedResponse>(
+                `${API_BASE_URL}/email/sync/updated`,
+                {
+                    params,
+                    headers: { Authorization: `Bearer ${this.token}` }
+                }
+            );
+            return response.data;
+        } catch (error) {
+            throw mapAurinkoError(error);
+        }
     }
 
     async performInitialSync() {
